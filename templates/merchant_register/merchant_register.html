@@ -1,0 +1,74 @@
+{% extends "merchant_register/base.html" %}
+
+{% block title %}Register Merchant{% endblock %}
+
+{% block content %}
+<form method="post" action="/merchant/registration">
+
+    <!-- Merchant basic information -->
+    <label>Merchant Name</label>
+    <input type="text" name="merchant_name" required>
+
+    <label>UEN</label>
+    <input type="text" name="uen" required>
+
+    <!-- Bank selection -->
+    <label>Bank Name</label>
+    <select name="bank_name" id="bank_name" required>
+        <option value="">-- Select Bank --</option>
+        {% for bank_name, bank in banks.items() %}
+            <option value="{{ bank_name }}"
+                    data-bank-code="{{ bank.bank_code }}"
+                    data-branch-code="{{ bank.branch_code }}">
+                {{ bank_name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <!-- Auto-filled bank code -->
+    <label>Bank Code</label>
+    <input type="text" name="bank_code" id="bank_code" readonly required>
+
+    <!-- Auto-filled branch code -->
+    <label>Branch Code</label>
+    <input type="text" name="branch_code" id="branch_code" readonly required>
+
+    <!-- Account details -->
+    <label>Account Number</label>
+    <input
+        type="text"
+        name="account_number"
+        required
+        inputmode="numeric"
+        pattern="[0-9]+"
+        title="Account number must contain numbers only"
+    >
+
+    <label>Account Holder Name</label>
+    <input type="text" name="account_holder_name" required>
+
+    <!-- Merchant status -->
+    <label>Status</label>
+    <select name="status" required>
+        <option value="active">Active</option>
+        <option value="pending">Pending</option>
+        <option value="suspended">Suspended</option>
+    </select>
+
+    <button type="submit">Register Merchant</button>
+</form>
+
+<!-- Simple, safe JS (no Jinja objects injected) -->
+<script>
+    const bankSelect = document.getElementById("bank_name");
+    const bankCodeInput = document.getElementById("bank_code");
+    const branchCodeInput = document.getElementById("branch_code");
+
+    bankSelect.addEventListener("change", function () {
+        const selected = this.options[this.selectedIndex];
+
+        bankCodeInput.value = selected.dataset.bankCode || "";
+        branchCodeInput.value = selected.dataset.branchCode || "";
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "merchant_register/base.html" %}
+
+{% block title %}Your Merchant Registration Success!!{% endblock %}
+
+{% block content %}
+<h2>Your Merchant Registration Successful!</h2>
+
+<p><strong>Merchant ID:</strong> {{ merchant_id }}</p>
+<p><strong>Registration Date:</strong> {{ registration_date }}</p>
+<p><strong>Branch Name:</strong> {{ branch_name }}</p>
+<p><strong>Status:</strong> {{ status }}</p>
+
+<a href="/merchant/register">Register another merchant</a>
+{% endblock %}
