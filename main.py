@@ -1,7 +1,8 @@
 from flask import Flask, jsonify, request, render_template
 from datetime import datetime
 import uuid
-
+from models import Household
+from storage import household_db, save_to_file as save_household_json, load_from_file as load_household_data
 app = Flask(__name__)
 
 # =====================================================
@@ -232,7 +233,53 @@ def merchant_register_page():
         "merchant_register/merchant_register.html",
         banks=banks
     )
+# =====================================================
+# [UPDATED] HOUSEHOLD REGISTRATION API
+# =====================================================
+@app.route("/household/registration", methods=["POST"])
+def household_register():
+    # 1. 
+    payload = request.get_json() if request.is_json else request.form.to_dict()
+    if not payload:
+        return jsonify({"error": "Invalid or missing request body"}), 400
 
+    h_id = payload.get("household_id")
+    
+    # verify id
+    if not h_id:
+        return jsonify({"error": "Missing household_id"}), 400
+
+    # 3. 驗證: 檢查是否已存在 (O(1) 快速查找)
+    if h_id in household_db:
+        return jsonify({
+            "error": "Household already registered",
+            "household_id": h_id
+        }), 409 # Conflict
+
+    # 4. 
+    try:
+        new_household = Household(h_id, payload)
+    except Exception as e:
+        return jsonify({"error": f"Creation failed: {str(e)}"}), 500
+
+    # 5. 
+    household_db[h_id] = new_household
+
+    # write household_data.json
+    save_household_json()
+
+    #status
+    return jsonify({
+        "status": "success",
+        "message": "Household registered successfully.",
+        "household_id": h_id,
+        "eligibility": {
+            "total_value": 800,
+            "May_2025_Status": "Unclaimed", # 
+            "Jan_2026_Status": "Unclaimed"
+        },
+        "next_step": "Please use /claim API to redeem your vouchers."
+    }), 201
 # test
 # APP ENTRY
 if __name__ == "__main__":
