@@ -1,6 +1,6 @@
 import json
 import os
-from models import Household
+from models.household import Household
 
 FILE_PATH = "household_data.json"
 household_db = {} 
