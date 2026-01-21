@@ -161,7 +161,11 @@ def merchant_register_page():
 
     return render_template("merchant_register/merchant_register.html", banks=banks)
 
+<<<<<<< HEAD
 # ------------------------------------------------------------
+=======
+# test
+>>>>>>> main
 # APP ENTRY
 # ------------------------------------------------------------
 if __name__ == "__main__":
