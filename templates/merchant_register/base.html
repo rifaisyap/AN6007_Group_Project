@@ -1,19 +1,173 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1"
+    >
+
     <title>{% block title %}Merchant System{% endblock %}</title>
+
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        label { display: block; margin-top: 10px; }
-        input, select { width: 300px; padding: 6px; }
-        button { margin-top: 20px; padding: 10px; }
+        :root {
+            --primary: #1d4ed8;
+            --primary-dark: #1e40af;
+            --primary-light: #dbeafe;
+            --bg: #f0f6ff;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #475569;
+            --border: #c7d2fe;
+            --error: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                         Roboto, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+
+        .container {
+            min-height: 100vh;
+            padding: env(safe-area-inset-top) 16px
+                     env(safe-area-inset-bottom);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 720px;
+            background: var(--card);
+            padding: 24px 20px 32px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(29, 78, 216, 0.15);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 24px;
+            color: var(--primary-dark);
+        }
+
+        h3 {
+            color: var(--primary-dark);
+            margin-bottom: 14px;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            font-size: 15px;
+            background: #f8fbff;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+        }
+
+        input[readonly] {
+            background: var(--primary-light);
+            font-weight: 600;
+        }
+
+        .form-section {
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-section:last-child {
+            border-bottom: none;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .hint {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .error {
+            color: var(--error);
+            font-weight: 600;
+        }
+
+        .form-action {
+            margin-top: 32px;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            border: none;
+            font-size: 16px;
+            font-weight: 700;
+            background: var(--primary);
+            color: white;
+        }
+
+        button:active {
+            background: var(--primary-dark);
+            transform: scale(0.98);
+        }
+
+        @media (min-width: 768px) {
+            .form-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .card {
+                padding: 36px;
+            }
+
+            button {
+                width: auto;
+                min-width: 260px;
+            }
+
+            .form-action {
+                text-align: center;
+            }
+        }
     </style>
 </head>
 <body>
 
-<h1>Merchant Registration System</h1>
-
-{% block content %}{% endblock %}
+<div class="container">
+    <div class="card">
+        <h1>Merchant Registration</h1>
+        {% block content %}{% endblock %}
+    </div>
+</div>
 
 </body>
 </html>

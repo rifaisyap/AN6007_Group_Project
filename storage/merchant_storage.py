@@ -74,7 +74,7 @@ def validate_payload(payload):
     if not is_numeric(payload["account_number"]):
         return "Invalid account number"
 
-    if not (6 <= len(payload["account_number"]) <= 20):
+    if not (5 <= len(payload["account_number"])):
         return "Invalid account number length"
 
     return None
