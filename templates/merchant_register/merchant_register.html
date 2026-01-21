@@ -1,74 +1,142 @@
 {% extends "merchant_register/base.html" %}
-
 {% block title %}Register Merchant{% endblock %}
 
 {% block content %}
 <form method="post" action="/merchant/registration">
 
-    <!-- Merchant basic information -->
-    <label>Merchant Name</label>
-    <input type="text" name="merchant_name" required>
+    <!-- Merchant Info -->
+    <div class="form-section">
+        <h3>Merchant Information</h3>
 
-    <label>UEN</label>
-    <input type="text" name="uen" required>
+        <div class="form-grid">
+            <div>
+                <label>Merchant Name</label>
+                <input type="text" name="merchant_name" required>
+            </div>
 
-    <!-- Bank selection -->
-    <label>Bank Name</label>
-    <select name="bank_name" id="bank_name" required>
-        <option value="">-- Select Bank --</option>
-        {% for bank_name, bank in banks.items() %}
-            <option value="{{ bank_name }}"
-                    data-bank-code="{{ bank.bank_code }}"
-                    data-branch-code="{{ bank.branch_code }}">
-                {{ bank_name }}
-            </option>
-        {% endfor %}
-    </select>
+            <div>
+                <label>UEN</label>
+                <input
+                    type="text"
+                    id="uen"
+                    name="uen"
+                    inputmode="numeric"
+                    placeholder="Numbers only"
+                    required
+                >
+                <p class="hint error" id="uen_error" style="display:none;">
+                    UEN must contain numbers only
+                </p>
+            </div>
+        </div>
+    </div>
 
-    <!-- Auto-filled bank code -->
-    <label>Bank Code</label>
-    <input type="text" name="bank_code" id="bank_code" readonly required>
+    <!-- Bank Info -->
+    <div class="form-section">
+        <h3>Bank Details</h3>
 
-    <!-- Auto-filled branch code -->
-    <label>Branch Code</label>
-    <input type="text" name="branch_code" id="branch_code" readonly required>
+        <div class="form-grid">
+            <div>
+                <label>Bank Name</label>
+                <select name="bank_name" id="bank_name" required>
+                    <option value="">Select bank</option>
+                    {% for bank_name, bank in banks.items() %}
+                        <option
+                            value="{{ bank_name }}"
+                            data-bank-code="{{ bank.bank_code }}"
+                            data-branch-code="{{ bank.branch_code }}"
+                        >
+                            {{ bank_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
 
-    <!-- Account details -->
-    <label>Account Number</label>
-    <input
-        type="text"
-        name="account_number"
-        required
-        inputmode="numeric"
-        pattern="[0-9]+"
-        title="Account number must contain numbers only"
-    >
+            <div>
+                <label>Account Number</label>
+                <input
+                    type="text"
+                    id="account_number"
+                    name="account_number"
+                    inputmode="numeric"
+                    placeholder="Numbers only"
+                    required
+                >
+                <p class="hint error" id="account_error" style="display:none;">
+                    Account number must contain numbers only
+                </p>
+            </div>
 
-    <label>Account Holder Name</label>
-    <input type="text" name="account_holder_name" required>
+            <div>
+                <label>Bank Code</label>
+                <input type="text" id="bank_code" name="bank_code" readonly required>
+            </div>
 
-    <!-- Merchant status -->
-    <label>Status</label>
-    <select name="status" required>
-        <option value="active">Active</option>
-        <option value="pending">Pending</option>
-        <option value="suspended">Suspended</option>
-    </select>
+            <div>
+                <label>Branch Code</label>
+                <input type="text" id="branch_code" name="branch_code" readonly required>
+            </div>
 
-    <button type="submit">Register Merchant</button>
+            <div>
+                <label>Account Holder Name</label>
+                <input type="text" name="account_holder_name" required>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status -->
+    <div class="form-section">
+        <h3>Status</h3>
+        <select name="status" required>
+            <option value="active">Active</option>
+            <option value="pending">Pending</option>
+            <option value="suspended">Suspended</option>
+        </select>
+    </div>
+
+    <!-- Submit -->
+    <div class="form-action">
+        <button type="submit">Register Merchant</button>
+    </div>
 </form>
 
-<!-- Simple, safe JS (no Jinja objects injected) -->
 <script>
+    // Bank data - auto fill
     const bankSelect = document.getElementById("bank_name");
-    const bankCodeInput = document.getElementById("bank_code");
-    const branchCodeInput = document.getElementById("branch_code");
+    const bankCode = document.getElementById("bank_code");
+    const branchCode = document.getElementById("branch_code");
 
     bankSelect.addEventListener("change", function () {
-        const selected = this.options[this.selectedIndex];
-
-        bankCodeInput.value = selected.dataset.bankCode || "";
-        branchCodeInput.value = selected.dataset.branchCode || "";
+        const opt = this.options[this.selectedIndex];
+        bankCode.value = opt.dataset.bankCode || "";
+        branchCode.value = opt.dataset.branchCode || "";
     });
+
+    // Helper for numeric data only
+    function numericOnly(inputEl, errorEl) {
+        inputEl.addEventListener("input", function () {
+            const numericValue = this.value.replace(/\D/g, "");
+
+            if (this.value !== numericValue) {
+                errorEl.style.display = "block";
+            } else {
+                errorEl.style.display = "none";
+            }
+
+            this.value = numericValue;
+        });
+    }
+
+    // UEN validation
+    numericOnly(
+        document.getElementById("uen"),
+        document.getElementById("uen_error")
+    );
+
+    // Account number validation
+    numericOnly(
+        document.getElementById("account_number"),
+        document.getElementById("account_error")
+    );
 </script>
 {% endblock %}
