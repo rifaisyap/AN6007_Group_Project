@@ -1,0 +1,130 @@
+{% extends "merchant_register/base.html" %}
+
+{% block title %}Voucher Redemption Test{% endblock %}
+
+{% block content %}
+
+<div class="form-section">
+    <h3>👨‍👩‍👧 Household App Simulation</h3>
+    <p class="hint">Select an amount to generate a redemption code.</p>
+    
+    <div class="form-grid">
+        <div>
+            <label for="h_id">Household ID</label>
+            <input type="text" id="h_id" value="H52298800781" placeholder="Enter Household ID">
+        </div>
+        <div>
+            <label for="amount">Voucher Amount</label>
+            <select id="amount">
+                <option value="2">$2</option>
+                <option value="5">$5</option>
+                <option value="10">$10</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="form-action">
+        <button onclick="generateQR()">Generate QR String</button>
+    </div>
+
+    <div id="household_result" style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none;"></div>
+</div>
+
+<div class="form-section">
+    <h3>🏪 Merchant App Simulation</h3>
+    <p class="hint">Paste the generated string above to redeem.</p>
+
+    <div class="form-grid">
+        <div>
+            <label for="m_id">Merchant ID</label>
+            <input type="text" id="m_id" value="M001">
+        </div>
+        <div>
+            <label for="qr_input">Scanned Code</label>
+            <input type="text" id="qr_input" placeholder="e.g. HouseholdID+VoucherCode">
+        </div>
+    </div>
+
+    <div class="form-action">
+        <button onclick="redeemVoucher()" style="background-color: #10b981;">Redeem Voucher</button>
+    </div>
+
+    <div id="merchant_result" style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none;"></div>
+</div>
+
+<script>
+    // ---------------------------
+    // 1. Household Logic
+    // ---------------------------
+    async function generateQR() {
+        const h_id = document.getElementById('h_id').value;
+        const amount = document.getElementById('amount').value;
+        const resultDiv = document.getElementById('household_result');
+
+        try {
+            const response = await fetch('/household/use_voucher', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ household_id: h_id, amount: parseInt(amount) })
+            });
+            
+            const data = await response.json();
+
+            resultDiv.style.display = 'block';
+            if (response.ok) {
+                // 成功：顯示綠色背景，並自動把 Code 填入下方的商家欄位方便測試
+                resultDiv.style.background = '#dcfce7'; 
+                resultDiv.style.color = '#166534';
+                resultDiv.innerHTML = `<strong>Success!</strong><br>Code: <code>${data.qr_string}</code>`;
+                
+                // 自動填入 Merchant 區塊 (UX 優化)
+                document.getElementById('qr_input').value = data.qr_string;
+            } else {
+                // 失敗：顯示紅色背景
+                resultDiv.style.background = '#fee2e2';
+                resultDiv.style.color = '#991b1b';
+                resultDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    // ---------------------------
+    // 2. Merchant Logic
+    // ---------------------------
+    async function redeemVoucher() {
+        const m_id = document.getElementById('m_id').value;
+        const qr_string = document.getElementById('qr_input').value;
+        const resultDiv = document.getElementById('merchant_result');
+
+        try {
+            const response = await fetch('/merchant/redeem', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ merchant_id: m_id, qr_string: qr_string })
+            });
+
+            const data = await response.json();
+
+            resultDiv.style.display = 'block';
+            if (response.ok) {
+                resultDiv.style.background = '#dcfce7';
+                resultDiv.style.color = '#166534';
+                resultDiv.innerHTML = `
+                    <strong>Transaction Completed!</strong><br>
+                    ID: ${data.transaction_id}<br>
+                    Status: ${data.new_status}
+                `;
+            } else {
+                resultDiv.style.background = '#fee2e2';
+                resultDiv.style.color = '#991b1b';
+                resultDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+</script>
+
+{% endblock %}
