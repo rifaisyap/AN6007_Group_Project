@@ -2,9 +2,15 @@ from flask import Flask, jsonify, request, render_template
 from datetime import datetime
 import uuid
 from models.household import Household 
-from storage.household_storage import household_db, save_to_file as save_household_json, load_from_file as load_household_data
+from storage.household_storage import (
+    household_db, 
+    save_household_json, 
+    load_household_data
+)
 from models.merchant import Merchant 
 from storage.merchant_storage import validate_bank_details, save_merchant_to_txt, validate_payload, MERCHANTS, BANK_DATA
+from models.claim import generate_vouchers
+from models.redemption import generate_qr_string, process_redemption
 
 app = Flask(__name__)
 
@@ -131,7 +137,6 @@ def household_register():
 
     # write household_data.json
     save_household_json()
-
     #status
     return jsonify({
         "status": "success",
@@ -144,8 +149,71 @@ def household_register():
         },
         "next_step": "Please use /claim API to redeem your vouchers."
     }), 201
+# ------------------------------------------------------------
+# Voucher Claim
+# ------------------------------------------------------------
+@app.route("/household/claim", methods=["POST"])
+def claim_api():
+    payload = request.get_json()
+    if not payload:
+        return jsonify({"error": "Missing JSON body"}), 400
 
+    h_id = payload.get("household_id")
+    tranche = payload.get("tranche")
+    if not h_id or not tranche:
+        return jsonify({"error": "Missing household_id or tranche"}), 400
 
+    success, result = generate_vouchers(h_id, tranche)
+
+    if success:
+        return jsonify(result), 200
+    else:
+        return jsonify({"error": result}), 400
+
+# -----------------------------------------------------------
+#Voucher Use
+# -----------------------------------------------------------
+@app.route("/household/use_voucher", methods=["POST"])
+def use_voucher_api():
+    data = request.get_json()
+    h_id = data.get("household_id")
+    amount = data.get("amount")
+
+    if not h_id or not amount:
+        return jsonify({"error": "Missing household_id or amount"}), 400
+
+    success, result = generate_qr_string(h_id, int(amount))
+
+    if success:
+        return jsonify(result), 200
+    else:
+        return jsonify({"error": result}), 400
+
+# 2. Merchant scan
+@app.route("/merchant/redeem", methods=["POST"])
+def redeem_api():
+    data = request.get_json()
+    m_id = data.get("merchant_id")
+    code = data.get("qr_string") #HouseholdID+VoucherID
+
+    if not m_id or not code:
+        return jsonify({"error": "Missing merchant_id or code"}), 400
+
+    success, result = process_redemption(m_id, code)
+
+    if success:
+        return jsonify(result), 200
+    else:
+        return jsonify({"error": result}), 400
+
+@app.route("/household/register", methods=["GET"])
+def household_register_page():
+    return render_template("household_register.html")
+    
+@app.route("/test/redemption")
+def redemption_test_page():
+    # 渲染我們即將建立的 HTML 模板
+    return render_template("redemption_test.html")
 # ------------------------------------------------------------
 # App Entry
 # ------------------------------------------------------------
