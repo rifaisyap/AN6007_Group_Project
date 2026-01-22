@@ -9,7 +9,7 @@ from storage.household_storage import (
 )
 from models.merchant import Merchant 
 from storage.merchant_storage import validate_bank_details, save_merchant_to_txt, validate_payload, MERCHANTS, BANK_DATA
-
+from claim import process_claim_vouchers
 app = Flask(__name__)
 
 # ------------------------------------------------------------
@@ -136,6 +136,9 @@ def household_register():
     # write household_data.json
     save_household_json()
 
+# ------------------------------------------------------------
+# Voucher Claim
+# ------------------------------------------------------------
     #status
     return jsonify({
         "status": "success",
@@ -149,6 +152,14 @@ def household_register():
         "next_step": "Please use /claim API to redeem your vouchers."
     }), 201
 
+@app.route("/household/claim", methods=["POST"])
+def claim_vouchers():
+    data = request.get_json()
+    h_id = data.get("household_id")
+    tranche = data.get("tranche") 
+
+    result, status_code = process_claim_vouchers(h_id, tranche)
+    return jsonify(result), status_code
 
 # ------------------------------------------------------------
 # App Entry
