@@ -211,32 +211,30 @@ def household_register_page():
     return render_template("household_register.html")
 @app.route("/household/claim_page")
 def household_claim_page():
-    """顯示領券頁面"""
     return render_template("household_claim.html")
 @app.route("/household/redeem")
 def household_redeem_page():
-    return render_template("household_redeem.html") # 確保檔名一致
+    return render_template("household_redeem.html")
 
 #balance check
-# main.py
-
 @app.route("/household/balance_page")
 def household_balance_page():
     return render_template("household_balance.html")
 
 @app.route("/household/api/balance_history/<household_id>")
 def get_balance_and_history(household_id):
-    """API: get balance and transcation record"""
     try:
-        vouchers = load_vouchers_from_disk() #
+        from models.claim import load_vouchers_from_disk #
+        all_data = load_vouchers_from_disk() #
         
-        # 1. count
-        active = [v for v in vouchers if v["household_id"] == household_id and v["status"] == "Active"]
-        balance = sum(v["amount"] for v in active)
+        # 你的資料格式是字典，ID 為 Key
+        user_vouchers = all_data.get(household_id, [])
         
-        # 2. latest 5 record
-        history = [v for v in vouchers if v["household_id"] == household_id and v["status"] == "Redeemed"]
-        recent_history = history[-5:] 
+        active_vouchers = [v for v in user_vouchers if v.get("status") == "Active"] #
+        balance = sum(v.get("amount", 0) for v in active_vouchers) #
+        
+        history_vouchers = [v for v in user_vouchers if v.get("status") == "Redeemed"] #
+        recent_history = history_vouchers[-5:] #
         
         return jsonify({
             "total_balance": balance,
@@ -245,9 +243,10 @@ def get_balance_and_history(household_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/merchant/redeem")
 def merchant_redeem_page():
-    return render_template("merchant_redeem.html") # 確保檔名一致
+    return render_template("merchant_redeem.html")
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -287,5 +286,13 @@ def redeem_voucher():
 # ------------------------------------------------------------
 # App Entry
 # ------------------------------------------------------------
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    from storage.household_storage import load_household_data
+    
+    # 2.
+    print("🔄 System Starting... Loading data from disk...")
+    load_household_data()
+    
+    # 3. 
+    app.run(port=8000, debug=True)

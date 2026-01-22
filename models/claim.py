@@ -92,5 +92,5 @@ def generate_vouchers(household_id, tranche):
         "message": "Vouchers generated successfully",
         "tranche": tranche,
         "count": len(new_vouchers),
-        "vouchers": new_vouchers  # 回傳給前端顯示用
+        "vouchers": new_vouchers  # 
     }
