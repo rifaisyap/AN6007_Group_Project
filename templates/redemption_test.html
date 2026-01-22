@@ -78,10 +78,8 @@
                 resultDiv.style.color = '#166534';
                 resultDiv.innerHTML = `<strong>Success!</strong><br>Code: <code>${data.qr_string}</code>`;
                 
-                // 自動填入 Merchant 區塊 (UX 優化)
                 document.getElementById('qr_input').value = data.qr_string;
             } else {
-                // 失敗：顯示紅色背景
                 resultDiv.style.background = '#fee2e2';
                 resultDiv.style.color = '#991b1b';
                 resultDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;

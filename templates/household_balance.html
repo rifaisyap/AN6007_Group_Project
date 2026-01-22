@@ -38,11 +38,10 @@
         const data = await response.json();
 
         if (response.ok) {
-            // 顯示餘額
+
             document.getElementById('balance_card').style.display = 'block';
             document.getElementById('balance_amount').innerText = `$${data.total_balance}`;
 
-            // 顯示歷史紀錄
             const historyBody = document.getElementById('history_body');
             historyBody.innerHTML = '';
             if (data.history.length > 0) {

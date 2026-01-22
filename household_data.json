@@ -1,15 +1,28 @@
 {
-    "H2026001": {
-        "household_id": "H2026001",
+    "g2505228g": {
+        "household_id": "g2505228g",
         "info": {
-            "household_id": "H2026001",
-            "head_of_household": "Alice Tan",
-            "address": "101 Jurong East St 12",
-            "postal_code": "600101"
+            "household_id": "g2505228g",
+            "head_of_household": "cheng",
+            "address": "123 jurong west",
+            "postal_code": "643662"
         },
         "claims": {
-            "May_2025": false,
-            "Jan_2026": false
+            "May_2025": true,
+            "Jan_2026": true
+        }
+    },
+    "123456": {
+        "household_id": "123456",
+        "info": {
+            "household_id": "123456",
+            "head_of_household": "hsu",
+            "address": "123",
+            "postal_code": "213435"
+        },
+        "claims": {
+            "May_2025": true,
+            "Jan_2026": true
         }
     }
 }
