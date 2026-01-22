@@ -9,7 +9,8 @@ from storage.household_storage import (
 )
 from models.merchant import Merchant 
 from storage.merchant_storage import validate_bank_details, save_merchant_to_txt, validate_payload, MERCHANTS, BANK_DATA
-from claim import generate_vouchers
+from models.claim import generate_vouchers
+from models.redemption import generate_qr_string, process_redemption
 
 app = Flask(__name__)
 
@@ -169,6 +170,41 @@ def claim_api():
     else:
         return jsonify({"error": result}), 400
 
+# -----------------------------------------------------------
+#Voucher Use
+# -----------------------------------------------------------
+@app.route("/household/use_voucher", methods=["POST"])
+def use_voucher_api():
+    data = request.get_json()
+    h_id = data.get("household_id")
+    amount = data.get("amount")
+
+    if not h_id or not amount:
+        return jsonify({"error": "Missing household_id or amount"}), 400
+
+    success, result = generate_qr_string(h_id, int(amount))
+
+    if success:
+        return jsonify(result), 200
+    else:
+        return jsonify({"error": result}), 400
+
+# 2. Merchant scan
+@app.route("/merchant/redeem", methods=["POST"])
+def redeem_api():
+    data = request.get_json()
+    m_id = data.get("merchant_id")
+    code = data.get("qr_string") #HouseholdID+VoucherID
+
+    if not m_id or not code:
+        return jsonify({"error": "Missing merchant_id or code"}), 400
+
+    success, result = process_redemption(m_id, code)
+
+    if success:
+        return jsonify(result), 200
+    else:
+        return jsonify({"error": result}), 400
 # ------------------------------------------------------------
 # App Entry
 # ------------------------------------------------------------
