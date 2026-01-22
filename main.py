@@ -205,6 +205,11 @@ def redeem_api():
         return jsonify(result), 200
     else:
         return jsonify({"error": result}), 400
+
+@app.route("/test/redemption")
+def redemption_test_page():
+    # 渲染我們即將建立的 HTML 模板
+    return render_template("redemption_test.html")
 # ------------------------------------------------------------
 # App Entry
 # ------------------------------------------------------------
