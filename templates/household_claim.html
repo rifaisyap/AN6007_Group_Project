@@ -1,0 +1,80 @@
+{% extends "merchant_register/base.html" %}
+{% block title %}Voucher Claim{% endblock %}
+{% block header_title %}CDC Voucher Claim Portal{% endblock %}
+
+{% block content %}
+<div class="form-section">
+    <h3>🧧 Claim Your Vouchers</h3>
+    <p class="hint">Enter your Household ID and select the voucher period.</p>
+    
+    <div class="form-grid">
+        <div>
+            <label for="h_id">Household ID</label>
+            <input type="text" id="h_id" placeholder="e.g. H2026001" required>
+        </div>
+        <div>
+            <label for="tranche">Voucher Tranche</label>
+            <select id="tranche">
+                <option value="May_2025">May 2025 Tranche</option>
+                <option value="Jan_2026">January 2026 Tranche</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="form-action">
+        <button onclick="claimVouchers()" id="claimBtn">Claim Vouchers Now</button>
+    </div>
+
+    <div id="claim_result" style="margin-top: 20px; padding: 15px; border-radius: 12px; display: none;"></div>
+</div>
+
+<script>
+    async function claimVouchers() {
+        const h_id = document.getElementById('h_id').value;
+        const tranche = document.getElementById('tranche').value;
+        const resultDiv = document.getElementById('claim_result');
+        const btn = document.getElementById('claimBtn');
+
+        if (!h_id) {
+            alert("Please enter your Household ID");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+        resultDiv.style.display = 'none';
+
+        try {
+            const response = await fetch('/household/claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ household_id: h_id, tranche: tranche })
+            });
+            
+            const data = await response.json();
+            resultDiv.style.display = 'block';
+
+            if (response.ok) {
+                resultDiv.style.background = '#dcfce7';
+                resultDiv.style.color = '#166534';
+                resultDiv.innerHTML = `
+                    <h4 style="margin:0">✅ Claim Successful!</h4>
+                    <p>Total Vouchers: <strong>${data.total_vouchers}</strong></p>
+                    <p>You can now go to the Redeem page to use them.</p>
+                `;
+            } else {
+                resultDiv.style.background = '#fee2e2';
+                resultDiv.style.color = '#991b1b';
+                resultDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;
+            }
+        } catch (error) {
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = '#fee2e2';
+            resultDiv.innerHTML = `<strong>System Error:</strong> ${error.message}`;
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Claim Vouchers Now";
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "merchant_register/base.html" %}
+{% block title %}Household Redeem{% endblock %}
+{% block header_title %}Household Voucher System{% endblock %}
+
+{% block content %}
+<div class="form-section">
+    <h3>👨‍👩‍👧 Household App Simulation</h3>
+    <p class="hint">Select an amount to generate a redemption code.</p>
+    <div class="form-grid">
+        <div>
+            <label for="h_id">Household ID</label>
+            <input type="text" id="h_id" placeholder="Enter Household ID">
+        </div>
+        <div>
+            <label for="amount">Voucher Amount</label>
+            <select id="amount">
+                <option value="2">$2</option>
+                <option value="5">$5</option>
+                <option value="10">$10</option>
+            </select>
+        </div>
+    </div>
+    <div class="form-action">
+        <button onclick="generateQR()">Generate QR String</button>
+    </div>
+    <div id="household_result" style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none;"></div>
+</div>
+
+<script>
+    async function generateQR() {
+        const h_id = document.getElementById('h_id').value;
+        const amount = document.getElementById('amount').value;
+        const resultDiv = document.getElementById('household_result');
+        const response = await fetch('/household/use_voucher', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ household_id: h_id, amount: parseInt(amount) })
+        });
+        const data = await response.json();
+        resultDiv.style.display = 'block';
+        if (response.ok) {
+            resultDiv.style.background = '#dcfce7'; resultDiv.style.color = '#166534';
+            resultDiv.innerHTML = `<strong>Code Generated:</strong><br><code style="font-size:1.2rem;">${data.qr_string}</code><br><small>Give this code to the merchant.</small>`;
+        } else {
+            resultDiv.style.background = '#fee2e2'; resultDiv.style.color = '#991b1b';
+            resultDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;
+        }
+    }
+</script>
+{% endblock %}

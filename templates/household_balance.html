@@ -1,0 +1,63 @@
+{% extends "merchant_register/base.html" %}
+{% block title %}Check Balance{% endblock %}
+{% block header_title %}Household Wallet{% endblock %}
+
+{% block content %}
+<div class="form-section">
+    <h3>🔍 Check Your Balance</h3>
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <input type="text" id="h_id" placeholder="Enter Household ID">
+        <button onclick="fetchData()" style="width: auto; padding: 0 15px;">Check</button>
+    </div>
+
+    <div id="balance_card" style="display:none; background: #eff6ff; border: 2px solid #3b82f6; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 25px;">
+        <p style="margin:0; color: #1e40af; font-weight: bold;">Available Balance</p>
+        <h2 id="balance_amount" style="margin: 10px 0; font-size: 2.5rem; color: #1d4ed8;">$0</h2>
+    </div>
+
+    <div id="history_section" style="display:none;">
+        <h4>📜 Recent Redemptions</h4>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="border-bottom: 2px solid #e2e8f0; text-align: left;">
+                    <th style="padding: 8px;">Voucher ID</th>
+                    <th style="padding: 8px;">Amount</th>
+                </tr>
+            </thead>
+            <tbody id="history_body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    async function fetchData() {
+        const h_id = document.getElementById('h_id').value;
+        if (!h_id) return alert("Please enter ID");
+
+        const response = await fetch(`/household/api/balance_history/${h_id}`);
+        const data = await response.json();
+
+        if (response.ok) {
+            // 顯示餘額
+            document.getElementById('balance_card').style.display = 'block';
+            document.getElementById('balance_amount').innerText = `$${data.total_balance}`;
+
+            // 顯示歷史紀錄
+            const historyBody = document.getElementById('history_body');
+            historyBody.innerHTML = '';
+            if (data.history.length > 0) {
+                document.getElementById('history_section').style.display = 'block';
+                data.history.forEach(item => {
+                    historyBody.innerHTML += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 8px;">${item.voucher_id}</td>
+                            <td style="padding: 8px; font-weight:bold; color: #dc2626;">-$${item.amount}</td>
+                        </tr>`;
+                });
+            } else {
+                document.getElementById('history_section').style.display = 'none';
+            }
+        }
+    }
+</script>
+{% endblock %}

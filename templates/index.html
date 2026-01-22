@@ -1,0 +1,57 @@
+{% extends "merchant_register/base.html" %}
+
+{% block title %}CDC Redemption System{% endblock %}
+
+{% block header_title %}CDC Redemption System{% endblock %}
+
+{% block content %}
+<style>
+    .category-group {
+        margin-bottom: 25px;
+        text-align: left;
+    }
+    .category-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--primary-dark);
+        border-left: 4px solid var(--primary);
+        padding-left: 10px;
+        margin-bottom: 15px;
+    }
+    .nav-btn {
+        display: block;
+        width: 100%;
+        padding: 12px 20px;
+        margin-bottom: 10px;
+        background: white;
+        color: var(--primary);
+        text-decoration: none;
+        border: 1px solid var(--primary);
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    .nav-btn:hover {
+        background: var(--primary-light);
+        transform: translateX(5px);
+    }
+    .nav-btn i {
+        margin-right: 8px;
+    }
+</style>
+
+<div class="category-group">
+    <div class="category-title">🏪 Merchant</div>
+    <a href="/merchant/register" class="nav-btn">➜ Merchant Registration</a>
+    <a href="/merchant/redeem" class="nav-btn">➜ Merchant Redeem</a>
+</div>
+
+<div class="category-group">
+    <div class="category-title">👨‍👩‍👧 Household</div>
+    <a href="/household/register" class="nav-btn">➜ Household Registration</a>
+    <a href="/household/balance_page" class="nav-btn" >➜ Check Balance & History</a>
+    <a href="/household/claim_page" class="nav-btn">➜ Household Claim (May/Jan)</a>
+    <a href="/household/redeem" class="nav-btn">➜ Household Redeem</a>
+</div>
+
+{% endblock %}
