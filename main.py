@@ -9,7 +9,8 @@ from storage.household_storage import (
 )
 from models.merchant import Merchant 
 from storage.merchant_storage import validate_bank_details, save_merchant_to_txt, validate_payload, MERCHANTS, BANK_DATA
-from claim import process_claim_vouchers
+from claim import generate_vouchers
+
 app = Flask(__name__)
 
 # ------------------------------------------------------------
@@ -135,10 +136,6 @@ def household_register():
 
     # write household_data.json
     save_household_json()
-
-# ------------------------------------------------------------
-# Voucher Claim
-# ------------------------------------------------------------
     #status
     return jsonify({
         "status": "success",
@@ -151,15 +148,26 @@ def household_register():
         },
         "next_step": "Please use /claim API to redeem your vouchers."
     }), 201
-
+# ------------------------------------------------------------
+# Voucher Claim
+# ------------------------------------------------------------
 @app.route("/household/claim", methods=["POST"])
-def claim_vouchers():
-    data = request.get_json()
-    h_id = data.get("household_id")
-    tranche = data.get("tranche") 
+def claim_api():
+    payload = request.get_json()
+    if not payload:
+        return jsonify({"error": "Missing JSON body"}), 400
 
-    result, status_code = process_claim_vouchers(h_id, tranche)
-    return jsonify(result), status_code
+    h_id = payload.get("household_id")
+    tranche = payload.get("tranche")
+    if not h_id or not tranche:
+        return jsonify({"error": "Missing household_id or tranche"}), 400
+
+    success, result = generate_vouchers(h_id, tranche)
+
+    if success:
+        return jsonify(result), 200
+    else:
+        return jsonify({"error": result}), 400
 
 # ------------------------------------------------------------
 # App Entry
