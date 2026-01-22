@@ -4,7 +4,6 @@ import uuid
 from datetime import datetime
 from .claim import load_vouchers_from_disk, save_vouchers_to_disk
 
-# 根據專案文檔定義 CSV 表頭 [cite: 108-114]
 CSV_HEADERS = [
     "Transaction_ID", "Household_ID", "Merchant_ID", 
     "Transaction_Date_Time", "Voucher_Code", "Denomination_Used", 
@@ -17,11 +16,9 @@ def generate_qr_string(household_id, amount):
     使用者選擇面額 ($2, $5, $10)，系統找出一張可用的 Voucher。
     回傳格式: "HouseholdID+VoucherCode"
     """
-    # 1. 讀取所有 Voucher
     all_vouchers = load_vouchers_from_disk()
     user_vouchers = all_vouchers.get(household_id, [])
-
-    # 2. 尋找第一張符合面額且狀態為 "Active" 的券
+    
     target_voucher = None
     for v in user_vouchers:
         if v['amount'] == amount and v['status'] == "Active":
