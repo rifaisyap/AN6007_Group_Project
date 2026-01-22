@@ -209,11 +209,81 @@ def redeem_api():
 @app.route("/household/register", methods=["GET"])
 def household_register_page():
     return render_template("household_register.html")
-    
-@app.route("/test/redemption")
-def redemption_test_page():
-    # 渲染我們即將建立的 HTML 模板
-    return render_template("redemption_test.html")
+@app.route("/household/claim_page")
+def household_claim_page():
+    """顯示領券頁面"""
+    return render_template("household_claim.html")
+@app.route("/household/redeem")
+def household_redeem_page():
+    return render_template("household_redeem.html") # 確保檔名一致
+
+#balance check
+# main.py
+
+@app.route("/household/balance_page")
+def household_balance_page():
+    return render_template("household_balance.html")
+
+@app.route("/household/api/balance_history/<household_id>")
+def get_balance_and_history(household_id):
+    """API: get balance and transcation record"""
+    try:
+        vouchers = load_vouchers_from_disk() #
+        
+        # 1. count
+        active = [v for v in vouchers if v["household_id"] == household_id and v["status"] == "Active"]
+        balance = sum(v["amount"] for v in active)
+        
+        # 2. latest 5 record
+        history = [v for v in vouchers if v["household_id"] == household_id and v["status"] == "Redeemed"]
+        recent_history = history[-5:] 
+        
+        return jsonify({
+            "total_balance": balance,
+            "history": recent_history
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/merchant/redeem")
+def merchant_redeem_page():
+    return render_template("merchant_redeem.html") # 確保檔名一致
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+#Redemption Record
+import csv
+from datetime import datetime
+
+@app.route("/merchant/redeem", methods=["POST"])
+def redeem_voucher():
+    data = request.json
+    merchant_id = data.get("merchant_id")
+    qr_string = data.get("qr_string") 
+    success, result = process_redemption(merchant_id, qr_string) 
+
+    if success:
+        filename = f"Redeem_{datetime.now().strftime('%Y%m%d')}.csv"
+        file_exists = os.path.isfile(filename)
+
+        with open(filename, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            if not file_exists:
+                writer.writerow(["Transaction_ID", "Timestamp", "Merchant_ID", "Household_ID", "Voucher_ID", "Amount"])
+            
+            writer.writerow([
+                f"TXN{datetime.now().strftime('%H%M%S%f')[:10]}",
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                merchant_id,
+                result['household_id'],
+                result['voucher_id'],
+                result['amount']
+            ])
+
+        return jsonify({"status": "success", "transaction_id": "TXN...", "amount": result['amount']}), 200
+    else:
+        return jsonify({"error": result}), 400
 # ------------------------------------------------------------
 # App Entry
 # ------------------------------------------------------------

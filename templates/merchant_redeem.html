@@ -1,0 +1,46 @@
+{% extends "merchant_register/base.html" %}
+{% block title %}Merchant Redeem{% endblock %}
+{% block header_title %}Merchant Redemption Terminal{% endblock %}
+
+{% block content %}
+<div class="form-section">
+    <h3>🏪 Merchant Terminal</h3>
+    <p class="hint">Enter the code provided by the household.</p>
+    <div class="form-grid">
+        <div>
+            <label for="m_id">Merchant ID</label>
+            <input type="text" id="m_id" placeholder="e.g. M001">
+        </div>
+        <div>
+            <label for="qr_input">Scanned/Input Code</label>
+            <input type="text" id="qr_input" placeholder="HouseholdID+VoucherCode">
+        </div>
+    </div>
+    <div class="form-action">
+        <button onclick="redeemVoucher()" style="background-color: #10b981;">Confirm Redemption</button>
+    </div>
+    <div id="merchant_result" style="margin-top: 15px; padding: 10px; border-radius: 8px; display: none;"></div>
+</div>
+
+<script>
+    async function redeemVoucher() {
+        const m_id = document.getElementById('m_id').value;
+        const qr_string = document.getElementById('qr_input').value;
+        const resultDiv = document.getElementById('merchant_result');
+        const response = await fetch('/merchant/redeem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant_id: m_id, qr_string: qr_string })
+        });
+        const data = await response.json();
+        resultDiv.style.display = 'block';
+        if (response.ok) {
+            resultDiv.style.background = '#dcfce7'; resultDiv.style.color = '#166534';
+            resultDiv.innerHTML = `<strong>Success!</strong><br>Transaction ID: ${data.transaction_id}<br>Amount: $${data.amount}`;
+        } else {
+            resultDiv.style.background = '#fee2e2'; resultDiv.style.color = '#991b1b';
+            resultDiv.innerHTML = `<strong>Failed:</strong> ${data.error}`;
+        }
+    }
+</script>
+{% endblock %}

@@ -2,7 +2,7 @@ import os
 import csv
 import uuid
 from datetime import datetime
-from claim import load_vouchers_from_disk, save_vouchers_to_disk
+from .claim import load_vouchers_from_disk, save_vouchers_to_disk
 
 # 根據專案文檔定義 CSV 表頭 [cite: 108-114]
 CSV_HEADERS = [

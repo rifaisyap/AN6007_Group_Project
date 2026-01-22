@@ -1,0 +1,15 @@
+{
+    "H2026001": {
+        "household_id": "H2026001",
+        "info": {
+            "household_id": "H2026001",
+            "head_of_household": "Alice Tan",
+            "address": "101 Jurong East St 12",
+            "postal_code": "600101"
+        },
+        "claims": {
+            "May_2025": false,
+            "Jan_2026": false
+        }
+    }
+}
