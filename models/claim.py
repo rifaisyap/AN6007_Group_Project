@@ -17,7 +17,7 @@ TRANCHE_CONFIG = {
         ]
     },
     "Jan_2026": {
-        "total_value": 300,
+        "total_value": 270,
         "breakdown": [
             {"amount": 2, "count": 30},
             {"amount": 5, "count": 12},

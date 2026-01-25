@@ -5,6 +5,7 @@ from models.household import Household
 household_db = {} 
 FILE_PATH = "household_data.json"
 
+def save_household_json():
     data_to_save = {k: v.to_dict() for k, v in household_db.items()}
     with open(FILE_PATH, 'w') as f:
         json.dump(data_to_save, f, indent=4)

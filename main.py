@@ -11,6 +11,8 @@ from models.merchant import Merchant
 from storage.merchant_storage import validate_bank_details, save_merchant_to_txt, validate_payload, MERCHANTS, BANK_DATA
 from models.claim import generate_vouchers
 from models.redemption import generate_qr_string, process_redemption
+import os
+import csv
 
 app = Flask(__name__)
 
@@ -188,24 +190,37 @@ def use_voucher_api():
         return jsonify(result), 200
     else:
         return jsonify({"error": result}), 400
+    
 
-# 2. Merchant scan
-@app.route("/merchant/redeem", methods=["POST"])
-def redeem_api():
+@app.route("/api/household/redeem", methods=["POST"])
+def api_household_redeem():
     data = request.get_json()
+
+    h_id = data.get("household_id")
     m_id = data.get("merchant_id")
-    code = data.get("qr_string") #HouseholdID+VoucherID
+    amount = data.get("amount")
+    tranche = data.get("tranche")
 
-    if not m_id or not code:
-        return jsonify({"error": "Missing merchant_id or code"}), 400
+    if not h_id or not m_id or not amount or not tranche:
+        return jsonify({"error": "Missing required fields"}), 400
 
-    success, result = process_redemption(m_id, code)
+    # Reuse existing logic
+    normalized_tranche = f"{tranche[:3]}_{tranche[3:]}"
 
-    if success:
-        return jsonify(result), 200
-    else:
-        return jsonify({"error": result}), 400
+    success, qr_result = generate_qr_string(h_id, int(amount), tranche)
 
+
+    if not success:
+        return jsonify({"error": qr_result}), 400
+
+    return jsonify({
+        "status": "ready_for_redemption",
+        "qr_string": qr_result["qr_string"],
+        "denominations": qr_result.get("denominations", [])
+    }), 200
+
+
+# Merchant scan
 @app.route("/household/register", methods=["GET"])
 def household_register_page():
     return render_template("household_register.html")
@@ -243,46 +258,83 @@ def get_balance_and_history(household_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# Household Balance API 
+@app.route("/api/household/<household_id>/balance", methods=["GET"])
+def api_household_balance(household_id):
+    from models.claim import load_vouchers_from_disk
 
-@app.route("/merchant/redeem")
+    all_data = load_vouchers_from_disk()
+    user_vouchers = all_data.get(household_id, [])
+
+    balance = {
+        "May_2025": {2: 0, 5: 0, 10: 0},
+        "Jan_2026": {2: 0, 5: 0, 10: 0}
+    }
+
+    for v in user_vouchers:
+        if v.get("status") == "Active":
+            tranche = v.get("tranche")
+            amount = v.get("amount")
+
+            if tranche in balance and amount in balance[tranche]:
+                balance[tranche][amount] += 1
+
+    return jsonify(balance), 200
+
+
+
+@app.route("/merchant/redeem", methods=["GET"])
 def merchant_redeem_page():
     return render_template("merchant_redeem.html")
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
 
-#Redemption Record
-import csv
-from datetime import datetime
 
-@app.route("/merchant/redeem", methods=["POST"])
-def redeem_voucher():
-    data = request.json
+@app.route("/api/merchant/redeem", methods=["POST"])
+def api_merchant_redeem():
+    data = request.get_json()
     merchant_id = data.get("merchant_id")
-    qr_string = data.get("qr_string") 
-    success, result = process_redemption(merchant_id, qr_string) 
+    qr_string = data.get("qr_string")
 
-    if success:
-        filename = f"Redeem_{datetime.now().strftime('%Y%m%d')}.csv"
-        file_exists = os.path.isfile(filename)
+    if not merchant_id or not qr_string:
+        return jsonify({"error": "Missing merchant_id or qr_string"}), 400
 
-        with open(filename, mode='a', newline='') as file:
-            writer = csv.writer(file)
-            if not file_exists:
-                writer.writerow(["Transaction_ID", "Timestamp", "Merchant_ID", "Household_ID", "Voucher_ID", "Amount"])
-            
+    success, result = process_redemption(merchant_id, qr_string)
+
+    if not success:
+        return jsonify({"error": result}), 400
+
+    # CSV file per hour (matches assignment)
+    filename = f"Redeem{datetime.now().strftime('%Y%m%d%H')}.csv"
+    file_exists = os.path.isfile(filename)
+
+    with open(filename, mode="a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
             writer.writerow([
-                f"TXN{datetime.now().strftime('%H%M%S%f')[:10]}",
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                merchant_id,
-                result['household_id'],
-                result['voucher_id'],
-                result['amount']
+                "Transaction_ID",
+                "Household_ID",
+                "Merchant_ID",
+                "Transaction_Date_Time",
+                "Voucher_Code",
+                "Denomination_Used",
+                "Amount_Redeemed",
+                "Payment_Status",
+                "Remarks"
             ])
 
-        return jsonify({"status": "success", "transaction_id": "TXN...", "amount": result['amount']}), 200
-    else:
-        return jsonify({"error": result}), 400
+        for row in result["records"]:
+            writer.writerow(row)
+
+    return jsonify({
+        "status": "success",
+        "records_written": len(result["records"])
+    }), 200
+
+
 # ------------------------------------------------------------
 # App Entry
 # ------------------------------------------------------------
