@@ -4,7 +4,7 @@
             "voucher_code": "V-g2505228g-MAY-882FB7",
             "amount": 2,
             "tranche": "May_2025",
-            "status": "Active",
+            "status": "Redeemed",
             "household_id": "g2505228g",
             "created_at": "2026-01-22T06:37:50.389292"
         },
@@ -12,7 +12,7 @@
             "voucher_code": "V-g2505228g-MAY-A4131F",
             "amount": 2,
             "tranche": "May_2025",
-            "status": "Active",
+            "status": "Redeemed",
             "household_id": "g2505228g",
             "created_at": "2026-01-22T06:37:50.389311"
         },
@@ -20,7 +20,7 @@
             "voucher_code": "V-g2505228g-MAY-6CA3E1",
             "amount": 2,
             "tranche": "May_2025",
-            "status": "Active",
+            "status": "Redeemed",
             "household_id": "g2505228g",
             "created_at": "2026-01-22T06:37:50.389319"
         },
@@ -404,7 +404,7 @@
             "voucher_code": "V-g2505228g-MAY-5F8262",
             "amount": 5,
             "tranche": "May_2025",
-            "status": "Active",
+            "status": "Redeemed",
             "household_id": "g2505228g",
             "created_at": "2026-01-22T06:37:50.389587"
         },
@@ -412,7 +412,7 @@
             "voucher_code": "V-g2505228g-MAY-20E4B6",
             "amount": 5,
             "tranche": "May_2025",
-            "status": "Active",
+            "status": "Redeemed",
             "household_id": "g2505228g",
             "created_at": "2026-01-22T06:37:50.389592"
         },
@@ -420,7 +420,7 @@
             "voucher_code": "V-g2505228g-MAY-6328EB",
             "amount": 5,
             "tranche": "May_2025",
-            "status": "Active",
+            "status": "Redeemed",
             "household_id": "g2505228g",
             "created_at": "2026-01-22T06:37:50.389596"
         },
@@ -564,7 +564,7 @@
             "voucher_code": "V-g2505228g-MAY-C91249",
             "amount": 10,
             "tranche": "May_2025",
-            "status": "Active",
+            "status": "Redeemed",
             "household_id": "g2505228g",
             "created_at": "2026-01-22T06:37:50.389680"
         },
@@ -572,7 +572,7 @@
             "voucher_code": "V-g2505228g-MAY-C85591",
             "amount": 10,
             "tranche": "May_2025",
-            "status": "Active",
+            "status": "Redeemed",
             "household_id": "g2505228g",
             "created_at": "2026-01-22T06:37:50.389685"
         },
