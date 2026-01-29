@@ -428,7 +428,7 @@
             "voucher_code": "V-g2505228g-MAY-B72C5D",
             "amount": 5,
             "tranche": "May_2025",
-            "status": "Active",
+            "status": "Redeemed",
             "household_id": "g2505228g",
             "created_at": "2026-01-22T06:37:50.389602"
         },

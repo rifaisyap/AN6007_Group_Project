@@ -2,7 +2,8 @@ import flet as ft
 from api_client import get_balance, save_pending_request
 import random
 import string
-# 模擬記憶體內的暫存請求 (In-memory structure)
+
+# In-memory structure for pending requests
 pending_requests = {}
 
 def main(page: ft.Page):
@@ -17,21 +18,23 @@ def main(page: ft.Page):
         "remaining": 0,
         "denoms": {}
     }
+    
     refresh_btn = ft.IconButton(
         icon=ft.Icons.REFRESH,
-        icon_color=ft.Colors.WHITE, # 讓圖示變白色，配背景
-        tooltip="刷新數據",
-        on_click=lambda e: load_household(e) # 加上 lambda 確保正確觸發
+        icon_color=ft.Colors.WHITE, # Make icon white to match background
+        tooltip="Refresh data",
+        on_click=lambda e: load_household(e) # Use lambda to ensure correct trigger
     )
+
     # Set header
     header = ft.Container(
         width=float("inf"),
         padding=20,
         bgcolor=ft.Colors.BLUE_600,
-        content=ft.Row( # 改用 Row 讓文字和按鈕左右並排
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN, # 讓文字靠左，按鈕靠右
+        content=ft.Row( # Use Row to align text and button side-by-side
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN, # Text left, button right
             controls=[
-                # 這裡放你原本的 Column 文字區塊
+                # Text block for title and description
                 ft.Column(
                     spacing=4,
                     controls=[
@@ -48,7 +51,7 @@ def main(page: ft.Page):
                         )
                     ]
                 ),
-                # 這裡放新加的按鈕
+                # Newly added refresh button
                 refresh_btn
             ]
         )
@@ -235,56 +238,54 @@ def main(page: ft.Page):
 
 
     def handle_user_redeem(e):
-        # 在 app.py 的 handle_user_redeem 函數中修改：
+        # Modifications within handle_user_redeem function:
 
         hid = household_input.value.strip()
         selections = {amt: d["selected"] for amt, d in state["denoms"].items() if d["selected"] > 0}
         
         if not selections: return
 
-        # 1. 產生 6 位核銷代碼
+        # 1. Generate 6-digit redemption code
         redeem_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
         
-        # 2. 呼叫 API 存入 JSON 檔案 (這讓另一個 App 讀得到資料)
+        # 2. Call API to save to JSON file (allowing other Apps to read the data)
         save_pending_request(redeem_code, {
             "household_id": hid,
             "selections": selections,
             "total": selected_value()
         })
 
-        # 3. 僅顯示代碼與成功提示
+        # 3. Display code and success message only
         code_dialog = ft.AlertDialog(
-            title=ft.Text("您的核銷碼"),
+            title=ft.Text("Your Redemption Code"),
             content=ft.Column([
-                ft.Text("請將此代碼出示給商家："),
+                ft.Text("Please show this code to the merchant:"),
                 ft.Container(
                     content=ft.Text(
-                        redeem_code, # 第 240 行引用處
+                        redeem_code, 
                         size=44, 
                         weight="bold", 
                         color="blue",
-                        selectable=True # 讓 code 可以複製
+                        selectable=True # Allow code to be copied
                     ),
                     padding=10, bgcolor=ft.Colors.BLUE_50, border_radius=8
                 ),
-                ft.Text(f"總金額: ${selected_value()}.00", weight="bold")
+                ft.Text(f"Total Amount: ${selected_value()}.00", weight="bold")
             ], tight=True, horizontal_alignment="center"),
             actions=[
-                ft.TextButton("完成", on_click=lambda _: page.close(code_dialog))
+                ft.TextButton("Finish", on_click=lambda _: page.close(code_dialog))
             ]
         )
         page.open(code_dialog)
         page.update()
 
-    # 綁定按鈕
+    # Bind buttons
     redeem_btn.on_click = handle_user_redeem
-    # ... (其餘 page.add 保持不變) ...
+    # ... (remaining page.add logic stays the same) ...
 
     load_btn.on_click = load_household
     redeem_btn.on_click = handle_user_redeem
     
-    
-
     # Page
     page.add(
         header,
@@ -301,6 +302,5 @@ def main(page: ft.Page):
         ),
         content_section
     )
-
 
 ft.app(target=main)

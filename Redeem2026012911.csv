@@ -1,0 +1,2 @@
+Transaction_ID,Household_ID,Merchant_ID,Transaction_Date_Time,Voucher_Code,Denomination_Used,Amount_Redeemed,Payment_Status,Remarks
+TX1769658998,g2505228g,M001,2026-01-29-115638,V-g2505228g-MAY-B72C5D,$5.00,$5.00,Completed,Final denomination used
