@@ -7,7 +7,7 @@ def main(page: ft.Page):
     
     # 1. Initialize all controls
     status_text = ft.Text(value="", size=16, weight=ft.FontWeight.BOLD)
-    m_id = ft.TextField(label="Merchant ID", value="M001")
+    m_id = ft.TextField(label="Merchant ID", value="")
     code_input = ft.TextField(label="Enter Household Redemption Code", hint_text="e.g.: AB1234")
     result_card = ft.Container(visible=False)
 

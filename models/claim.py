@@ -80,8 +80,15 @@ def generate_vouchers(household_id, tranche):
     all_vouchers = load_vouchers_from_disk()
     
     if household_id not in all_vouchers:
-        all_vouchers[household_id] = []
-    all_vouchers[household_id].extend(new_vouchers)
+        # 初始化為物件，包含券列表與空的交易紀錄
+        all_data = {
+            "vouchers": [],
+            "redemption_history": []  # 預留空間給以後的交易紀錄
+        }
+        all_vouchers[household_id] = all_data
+    
+    # 將新產生的券加入住戶的 vouchers 列表
+    all_vouchers[household_id]["vouchers"].extend(new_vouchers)
     
     save_vouchers_to_disk(all_vouchers)
 

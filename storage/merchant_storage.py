@@ -1,11 +1,13 @@
+import csv
 from datetime import datetime
 from models.merchant import Merchant
 
-OUTPUT_FILE = "merchants.txt"
-# In-memory data structure
-MERCHANTS = {}  # merchant_id -> Merchant object
+OUTPUT_FILE = "merchants.csv"
 
-# Bank and brand reference data
+# In-memory data structure
+MERCHANTS = {} 
+
+# Bank reference data
 BANK_DATA = [
     {"bank_code": "7171", "bank_name": "DBS Bank Ltd", "branch_code": "001", "branch_name": "Main Branch"},
     {"bank_code": "7339", "bank_name": "OCBC Bank", "branch_code": "501", "branch_name": "Tampines Branch"},
@@ -19,7 +21,7 @@ BANK_DATA = [
     {"bank_code": "7012", "bank_name": "Bank of China Singapore", "branch_code": "001", "branch_name": "Main Branch"}
 ]
 
-# Required payload fields
+# Required fields
 REQUIRED_FIELDS = [
     "merchant_name",
     "uen",
@@ -33,17 +35,26 @@ REQUIRED_FIELDS = [
 
 ALLOWED_STATUS = {"active", "pending", "suspended"}
 
+
 def is_numeric(value: str) -> bool:
     return value.isdigit()
 
 
-# Function for validation 
+# Validate bank details
 def validate_bank_details(bank_name, bank_code, branch_code):
-    banks = [b for b in BANK_DATA if b["bank_name"] == bank_name]
-    if not banks:
+    banks = []
+    for bank in BANK_DATA:
+        if bank["bank_name"] == bank_name:
+            banks.append(bank)
+
+    if len(banks) == 0:
         return False, "INVALID_BANK_NAME", None
 
-    if bank_code not in {b["bank_code"] for b in banks}:
+    valid_bank_codes = []
+    for bank in banks:
+        valid_bank_codes.append(bank["bank_code"])
+
+    if bank_code not in valid_bank_codes:
         return False, "INVALID_BANK_CODE", None
 
     for bank in banks:
@@ -52,30 +63,62 @@ def validate_bank_details(bank_name, bank_code, branch_code):
 
     return False, "INVALID_BRANCH_CODE", None
 
-# Save merchant to txt file
-def save_merchant_to_txt(merchant: Merchant, branch_name: str):
-    with open(OUTPUT_FILE, "a", encoding="utf-8") as f:
-        f.write(merchant.to_txt() + "\n")
-        f.write(f"branch_name: {branch_name}\n")
-        f.write(f"saved_at: {datetime.utcnow().isoformat()}\n\n")
 
+# Save merchant to CSV file
+def save_merchant_to_csv(merchant: Merchant, branch_name: str):
+    with open(OUTPUT_FILE, "a", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+
+        # Write header (simple beginner approach)
+        writer.writerow([
+            "merchant_id",
+            "merchant_name",
+            "uen",
+            "bank_name",
+            "bank_code",
+            "branch_code",
+            "branch_name",
+            "account_number",
+            "account_holder_name",
+            "status",
+            "saved_at"
+        ])
+
+        # Write merchant data
+        writer.writerow([
+            merchant.merchant_id,
+            merchant.merchant_name,
+            merchant.uen,
+            merchant.bank_name,
+            merchant.bank_code,
+            merchant.branch_code,
+            branch_name,
+            merchant.account_number,
+            merchant.account_holder_name,
+            merchant.status,
+            datetime.utcnow().isoformat()
+        ])
+
+
+# Validate incoming payload
 def validate_payload(payload):
-    # Required fields check
-    missing = [f for f in REQUIRED_FIELDS if f not in payload]
-    if missing:
-        return "Missing required fields"
+    # Check required fields
+    for field in REQUIRED_FIELDS:
+        if field not in payload:
+            return "Missing required fields"
 
-    # Status validation
+    # Validate status
     status = payload["status"].lower()
     if status not in ALLOWED_STATUS:
         return "Invalid status"
 
-    # Account number validation
-    if not is_numeric(payload["account_number"]):
+    # Validate account number
+    account_number = payload["account_number"]
+
+    if not is_numeric(account_number):
         return "Invalid account number"
 
-    if not (5 <= len(payload["account_number"])):
+    if len(account_number) < 5:
         return "Invalid account number length"
 
     return None
-    

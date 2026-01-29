@@ -1,8 +1,8 @@
 {% extends "merchant_register/base.html" %}
 
-{% block title %}CDC Redemption System{% endblock %}
+{% block title %}CDC Voucher System{% endblock %}
 
-{% block header_title %}CDC Redemption System{% endblock %}
+{% block header_title %}CDC Voucher System{% endblock %}
 
 {% block content %}
 <style>
@@ -38,20 +38,26 @@
     .nav-btn i {
         margin-right: 8px;
     }
+    /* 提示文字樣式 */
+    .note-text {
+        font-size: 0.9rem;
+        color: #666;
+        font-style: italic;
+        margin-top: -10px;
+        margin-bottom: 15px;
+        padding-left: 15px;
+    }
 </style>
 
 <div class="category-group">
     <div class="category-title">🏪 Merchant</div>
     <a href="/merchant/register" class="nav-btn">➜ Merchant Registration</a>
-    <a href="/merchant/redeem" class="nav-btn">➜ Merchant Redeem</a>
 </div>
 
 <div class="category-group">
     <div class="category-title">👨‍👩‍👧 Household</div>
     <a href="/household/register" class="nav-btn">➜ Household Registration</a>
-    <a href="/household/balance_page" class="nav-btn" >➜ Check Balance & History</a>
     <a href="/household/claim_page" class="nav-btn">➜ Household Claim (May/Jan)</a>
-    <a href="/household/redeem" class="nav-btn">➜ Household Redeem</a>
 </div>
 
 {% endblock %}
