@@ -1,5 +1,5 @@
 """
-Household Voucher Management Application
+Voucher Management Application
 
 This application allows households to:
 1. View available vouchers and balances
@@ -14,47 +14,41 @@ and preparing them for merchant redemption.
 import flet as ft
 import random
 import string
-from api_client import (
-    get_active_vouchers,
-    save_pending_redemption_request,
-    get_redemption_history
-)
+from api_client import get_balance, save_pending_request, get_redemption_history
 
-
-def create_household_application(page):
+def main(page: ft.Page):
     """
-    Build and configure the household voucher management interface.
+    Main function for the household voucher application.
 
-    This function creates all UI components and connects them to the
-    voucher management logic for household users.
+    Args:
+        page: Flet page object for the application
     """
-    # Application configuration
-    page.title = "CDC Household Voucher Portal"
+    # Configure the page
+    page.title = "CDC Voucher Redemption"
     page.bgcolor = ft.Colors.GREY_100
     page.padding = 0
     page.scroll = ft.ScrollMode.AUTO
 
-    # Application State
+    # --- Application State ---
 
     # Track the current household's voucher state
-    application_state = {
-        "total_balance": 0,  # Total available voucher value
-        "remaining_balance": 0,  # Balance after current selections
-        "voucher_denominations": {}  # Available vouchers by amount
+    state = {
+        "total": 0,           # Total available voucher value
+        "remaining": 0,       # Balance after current selections
+        "denoms": {}          # Available vouchers by denomination
     }
 
-    # UI Component Definitions
+    # --- UI Component Definitions ---
 
     # Refresh button for reloading household data
-    refresh_button = ft.IconButton(
+    refresh_btn = ft.IconButton(
         icon=ft.Icons.REFRESH,
         icon_color=ft.Colors.WHITE,
-        tooltip="Refresh voucher data",
-        on_click=handle_household_login
+        tooltip="Refresh data"
     )
 
     # Application header
-    application_header = ft.Container(
+    header = ft.Container(
         width=float("inf"),
         padding=20,
         bgcolor=ft.Colors.BLUE_600,
@@ -65,25 +59,25 @@ def create_household_application(page):
                     spacing=4,
                     controls=[
                         ft.Text(
-                            "CDC Voucher Redemption Portal",
+                            "CDC Voucher Redemption",
                             size=22,
                             weight=ft.FontWeight.BOLD,
                             color=ft.Colors.WHITE
                         ),
                         ft.Text(
-                            "Select vouchers to redeem at participating merchants",
+                            "Select vouchers to redeem",
                             size=14,
                             color=ft.Colors.WHITE70
                         )
                     ]
                 ),
-                refresh_button
+                refresh_btn
             ]
         )
     )
 
     # Household identification input
-    household_id_input = ft.TextField(
+    household_input = ft.TextField(
         label="Household ID",
         filled=True,
         bgcolor=ft.Colors.WHITE,
@@ -91,25 +85,25 @@ def create_household_application(page):
     )
 
     # Error message display
-    error_message_display = ft.Text(color=ft.Colors.RED)
+    error_text = ft.Text(color=ft.Colors.RED)
 
     # Login button
-    login_button = ft.ElevatedButton(
-        text="Login to Household Account",
+    load_btn = ft.ElevatedButton(
+        "Login",
         height=45,
         width=float("inf")
     )
 
-    # Transaction History Components
+    # --- Transaction History Components ---
 
-    def display_transaction_history(event):
+    def handle_history_click(event):
         """
         Show the household's redemption transaction history.
 
-        This function retrieves and displays all previous redemption
-        transactions in a modal dialog for the household to review.
+        Args:
+            event: The button click event
         """
-        household_id = household_id_input.value.strip()
+        household_id = household_input.value.strip()
 
         if not household_id:
             return  # No household ID entered
@@ -130,8 +124,8 @@ def create_household_application(page):
         )
 
         # Add each transaction (most recent first)
-        for transaction in reversed(transaction_history):
-            transaction_card = create_transaction_card(transaction)
+        for record in reversed(transaction_history):
+            transaction_card = create_transaction_card(record)
             history_display.controls.append(transaction_card)
 
         # Create history dialog
@@ -143,8 +137,8 @@ def create_household_application(page):
             ),
             actions=[
                 ft.TextButton(
-                    text="Close",
-                    on_click=create_dialog_closer(history_dialog)
+                    "Close",
+                    on_click=lambda e: close_dialog(history_dialog)
                 )
             ]
         )
@@ -163,6 +157,12 @@ def create_household_application(page):
         Returns:
             A Container widget displaying the transaction
         """
+        # Create itemized description
+        items_description = ", ".join([
+            f"${amount}x{quantity}"
+            for amount, quantity in transaction_data['items'].items()
+        ])
+
         return ft.Container(
             padding=15,
             bgcolor=ft.Colors.WHITE,
@@ -196,58 +196,26 @@ def create_household_application(page):
 
                 # Itemized voucher breakdown
                 ft.Text(
-                    create_itemized_description(transaction_data['items']),
+                    f"Items: {items_description}",
                     size=12
                 )
             ])
         )
 
-    def create_itemized_description(items_dict):
-        """
-        Create a human-readable description of redeemed items.
-
-        Args:
-            items_dict: Dictionary mapping amounts to quantities
-
-        Returns:
-            Formatted string describing the items
-        """
-        item_descriptions = []
-        for amount, quantity in items_dict.items():
-            item_descriptions.append(f"${amount}x{quantity}")
-
-        return "Items: " + ", ".join(item_descriptions)
-
-    def create_dialog_closer(dialog):
-        """
-        Create a function to close a specific dialog.
-
-        Args:
-            dialog: The dialog to close
-
-        Returns:
-            A function that closes the dialog when called
-        """
-
-        def close_handler(event):
-            page.close(dialog)
-
-        return close_handler
-
     # History button
-    history_button = ft.OutlinedButton(
-        text="View Transaction History",
+    history_btn = ft.OutlinedButton(
+        text="View History",
         icon=ft.Icons.HISTORY,
-        on_click=display_transaction_history,
+        on_click=handle_history_click,
         height=45,
         width=float("inf")
     )
 
-    # Balance and Voucher Display Components
+    # --- Balance and Voucher Display Components ---
 
     # Balance display texts
-    total_balance_display = ft.Text(size=18, weight=ft.FontWeight.BOLD)
-    remaining_balance_display = ft.Text(size=16, color=ft.Colors.GREEN_700)
+    total_text = ft.Text(size=18, weight=ft.FontWeight.BOLD)
+    remaining_text = ft.Text(size=16, color=ft.Colors.GREEN_700)
 
     # Balance summary card
     balance_card = ft.Card(
@@ -256,132 +224,130 @@ def create_household_application(page):
             width=float("inf"),
             padding=20,
             content=ft.Column([
-                ft.Text("Voucher Balance", size=14, color=ft.Colors.GREY_600),
-                total_balance_display,
-                remaining_balance_display
+                ft.Text("Balance", size=14, color=ft.Colors.GREY_600),
+                total_text,
+                remaining_text
             ])
         )
     )
 
     # Voucher selection list
-    voucher_selection_list = ft.Column(spacing=12)
+    voucher_list = ft.Column(spacing=12)
 
     # Redemption button
-    redemption_button = ft.ElevatedButton(
-        text="Generate Redemption Code",
+    redeem_btn = ft.ElevatedButton(
+        text="Redeem Vouchers",
         height=48,
         disabled=True,
         width=float("inf")
     )
 
-    # Main Content Section (initially hidden)
+    # --- Main Content Section (initially hidden) ---
 
-    main_content_section = ft.Container(
+    content_section = ft.Container(
         visible=False,
         padding=20,
         content=ft.Column(
             spacing=20,
             controls=[
                 balance_card,
-                history_button,
+                history_btn,
                 ft.Text(
                     "Available Vouchers",
                     size=16,
                     weight=ft.FontWeight.BOLD
                 ),
-                voucher_selection_list,
-                redemption_button
+                voucher_list,
+                redeem_btn
             ]
         )
     )
 
-    # Core Business Logic Functions
+    # --- Core Business Logic Functions ---
 
-    def handle_household_login(event):
+    def handle_login(event):
         """
         Load household data and available vouchers.
 
-        This function validates the household ID, retrieves voucher data,
-        and updates the UI to show available vouchers for selection.
+        Args:
+            event: The button click event
         """
         # Clear previous errors
-        error_message_display.value = ""
+        error_text.value = ""
 
         # Get and validate household ID
-        household_id = household_id_input.value.strip()
+        household_id = household_input.value.strip()
 
         if not household_id:
-            error_message_display.value = "Please enter a household ID"
+            error_text.value = "Please enter a household ID"
             page.update()
             return
 
         # Retrieve active vouchers for this household
-        active_vouchers = get_active_vouchers(household_id)
+        active_vouchers = get_balance(household_id)
 
         if not active_vouchers:
-            error_message_display.value = "No active vouchers found for this household"
-            main_content_section.visible = False
+            error_text.value = "No active vouchers found for this household"
+            content_section.visible = False
             page.update()
             return
 
         # Process and organize voucher data
-        total_value, organized_vouchers = organize_vouchers_by_denomination(active_vouchers)
+        def aggregate_vouchers(voucher_list):
+            """
+            Group vouchers by denomination and count available quantities.
+
+            Args:
+                voucher_list: List of active voucher dictionaries
+
+            Returns:
+                Tuple of (total_value, organized_dictionary)
+            """
+            total_value = 0
+            denomination_counts = {}
+
+            for voucher in voucher_list:
+                if voucher["status"] == "Active":
+                    amount = voucher["amount"]
+                    total_value += amount
+                    denomination_counts[amount] = denomination_counts.get(amount, 0) + 1
+
+            return total_value, denomination_counts
+
+        total_value, organized_data = aggregate_vouchers(active_vouchers)
 
         # Update application state
-        application_state["total_balance"] = total_value
-        application_state["remaining_balance"] = total_value
-        application_state["voucher_denominations"] = organized_vouchers
+        state["total"] = total_value
+        state["remaining"] = total_value
+
+        # Convert to structured format with selection tracking
+        for amount, count in organized_data.items():
+            state["denoms"][amount] = {
+                "available": count,
+                "selected": 0
+            }
 
         # Refresh the UI
         update_voucher_display()
         update_balance_display()
 
         # Show the main content section
-        main_content_section.visible = True
+        content_section.visible = True
         page.update()
-
-    def organize_vouchers_by_denomination(voucher_list):
-        """
-        Group vouchers by denomination and count available quantities.
-
-        Args:
-            voucher_list: List of active voucher dictionaries
-
-        Returns:
-            Tuple of (total_value, organized_dictionary)
-        """
-        total_value = 0
-        denomination_counts = {}
-
-        for voucher in voucher_list:
-            if voucher["status"] == "Active":
-                amount = voucher["amount"]
-                total_value += amount
-                denomination_counts[amount] = denomination_counts.get(amount, 0) + 1
-
-        # Convert counts to structured format with selection tracking
-        organized_data = {}
-        for amount, count in denomination_counts.items():
-            organized_data[amount] = {
-                "available": count,
-                "selected": 0
-            }
-
-        return total_value, organized_data
 
     def update_voucher_display():
         """Update the voucher selection interface based on current state."""
-        voucher_selection_list.controls.clear()
+        voucher_list.controls.clear()
 
         # Sort denominations for consistent display
-        sorted_denominations = sorted(application_state["voucher_denominations"].keys())
+        sorted_denominations = sorted(state["denoms"].keys())
 
         for amount in sorted_denominations:
-            voucher_data = application_state["voucher_denominations"][amount]
+            voucher_data = state["denoms"][amount]
 
             # Create voucher selection card
             voucher_card = create_voucher_selection_card(amount, voucher_data)
-            voucher_selection_list.controls.append(voucher_card)
+            voucher_list.controls.append(voucher_card)
 
         page.update()
 
@@ -396,6 +362,14 @@ def create_household_application(page):
         Returns:
             A Card widget with quantity controls
         """
+        # Create decrease handler
+        def handle_decrease(event):
+            update_selected_quantity(amount, -1)
+
+        # Create increase handler
+        def handle_increase(event):
+            update_selected_quantity(amount, 1)
+
         return ft.Card(
             content=ft.Container(
                 padding=16,
@@ -411,7 +385,7 @@ def create_household_application(page):
                         # Decrease button
                         ft.IconButton(
                             icon=ft.Icons.REMOVE_CIRCLE_OUTLINE,
-                            on_click=create_quantity_changer(amount, -1)
+                            on_click=handle_decrease
                         ),
 
                         # Current quantity display
@@ -425,39 +399,22 @@ def create_household_application(page):
                         # Increase button
                         ft.IconButton(
                             icon=ft.Icons.ADD_CIRCLE_OUTLINE,
-                            on_click=create_quantity_changer(amount, 1)
+                            on_click=handle_increase
                         )
                     ])
                 ], alignment="spaceBetween")
             )
         )
 
-    def create_quantity_changer(amount, change_amount):
-        """
-        Create a function to change selected quantity for a specific denomination.
-
-        Args:
-            amount: The voucher denomination amount
-            change_amount: +1 to increase, -1 to decrease
-
-        Returns:
-            A function that updates the quantity when called
-        """
-
-        def quantity_change_handler(event):
-            update_selected_quantity(amount, change_amount)
-
-        return quantity_change_handler
-
     def update_selected_quantity(amount, change_amount):
         """Update the selected quantity for a voucher denomination."""
-        voucher_data = application_state["voucher_denominations"][amount]
+        voucher_data = state["denoms"][amount]
 
         # Check if we can increase
         if change_amount == 1:
             cannot_increase = (
-                    voucher_data["selected"] >= voucher_data["available"] or
-                    application_state["remaining_balance"] < amount
+                voucher_data["selected"] >= voucher_data["available"] or
+                state["remaining"] < amount
             )
             if cannot_increase:
                 return
@@ -477,51 +434,46 @@ def create_household_application(page):
         """Update all balance-related displays."""
         # Calculate current selected value
         selected_value = 0
-        for amount, voucher_data in application_state["voucher_denominations"].items():
+        for amount, voucher_data in state["denoms"].items():
             selected_value += amount * voucher_data["selected"]
 
         # Update remaining balance
-        application_state["remaining_balance"] = (
-                application_state["total_balance"] - selected_value
-        )
+        state["remaining"] = state["total"] - selected_value
 
         # Update display texts
-        total_balance_display.value = f"Total Available: ${application_state['total_balance']}"
-        remaining_balance_display.value = f"Remaining Balance: ${application_state['remaining_balance']}"
+        total_text.value = f"Total Available: ${state['total']}"
+        remaining_text.value = f"Remaining: ${state['remaining']}"
 
         # Enable/disable redemption button
-        redemption_button.disabled = (selected_value == 0)
+        redeem_btn.disabled = (selected_value == 0)
 
         page.update()
 
-    def handle_redemption_request(event):
+    def handle_redemption(event):
         """
         Generate a redemption code and save the pending request.
 
-        This function:
-        1. Validates current selections
-        2. Generates a unique redemption code
-        3. Saves the request for merchant processing
-        4. Shows the code to the household user
+        Args:
+            event: The button click event
         """
         # Gather selected vouchers
-        selected_vouchers = {}
+        selected_items = {}
         total_amount = 0
 
-        for amount, voucher_data in application_state["voucher_denominations"].items():
+        for amount, voucher_data in state["denoms"].items():
             if voucher_data["selected"] > 0:
-                selected_vouchers[str(amount)] = voucher_data["selected"]
+                selected_items[str(amount)] = voucher_data["selected"]
                 total_amount += amount * voucher_data["selected"]
 
         # Generate unique redemption code
         redemption_code = generate_redemption_code()
 
         # Save the pending request
-        save_pending_redemption_request(
-            redemption_code=redemption_code,
-            request_data={
-                "household_id": household_id_input.value.strip(),
-                "selections": selected_vouchers,
+        save_pending_request(
+            code=redemption_code,
+            data={
+                "household_id": household_input.value.strip(),
+                "selections": selected_items,
                 "total": total_amount
             }
         )
@@ -543,7 +495,7 @@ def create_household_application(page):
             total_amount: Total redemption amount
         """
         redemption_dialog = ft.AlertDialog(
-            title=ft.Text("Your Redemption Code"),
+            title=ft.Text("Redemption Code"),
             content=ft.Column([
                 ft.Text("Show this code to the merchant:"),
 
@@ -563,9 +515,62 @@ def create_household_application(page):
                 ),
 
                 # Total amount display
-                ft.Text(f"Total Amount: ${total_amount}.00", weight="bold")
+                ft.Text(f"Total: ${total_amount}.00", weight="bold")
             ],
-                tight=True,
-                horizontal_alignment="center"),
+            tight=True,
+            horizontal_alignment="center"),
 
-            actions
+            actions=[
+                ft.TextButton(
+                    "Finish",
+                    on_click=lambda e: close_dialog(redemption_dialog)
+                )
+            ]
+        )
+
+        page.open(redemption_dialog)
+        page.update()
+
+    def show_notification(message):
+        """
+        Show a temporary notification message.
+
+        Args:
+            message: The message to display
+        """
+        page.snack_bar = ft.SnackBar(ft.Text(message))
+        page.snack_bar.open = True
+
+    def close_dialog(dialog):
+        """
+        Close a dialog window.
+
+        Args:
+            dialog: The dialog to close
+        """
+        page.close(dialog)
+        page.update()
+
+    # --- Connect Event Handlers ---
+
+    refresh_btn.on_click = handle_login
+    load_btn.on_click = handle_login
+    redeem_btn.on_click = handle_redemption
+
+    # --- Build the Page Layout ---
+
+    page.add(
+        header,
+        ft.Container(
+            padding=20,
+            content=ft.Column([
+                household_input,
+                load_btn,
+                error_text
+            ], spacing=16)
+        ),
+        content_section
+    )
+
+# Start the application
+ft.app(target=main)
