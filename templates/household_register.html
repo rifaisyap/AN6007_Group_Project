@@ -1,6 +1,8 @@
 {% extends "merchant_register/base.html" %}
 
 {% block title %}Household Registration{% endblock %}
+{% block header_title %}Household Registration{% endblock %}
+
 
 {% block content %}
 
@@ -68,9 +70,9 @@
                 resultDiv.style.background = '#dcfce7';
                 resultDiv.style.color = '#166534';
                 resultDiv.innerHTML = `
-                    <h3 style="margin:0">✅ Registration Successful!</h3>
-                    <p><strong>Household ID:</strong> ${data.household_id}</p>
-                    <p>Your account is now eligible for $${data.eligibility.total_value} vouchers.</p>
+                <h3 style="margin:0">✅ Registration Successful!</h3>
+                <p><strong>Household ID:</strong> ${data.household_id}</p>
+                <p>Your household has been successfully registered.</p>
                 `;
                 form.reset(); 
             } else {

@@ -1,11 +1,11 @@
 import csv
-from datetime import datetime
+import os
 from models.merchant import Merchant
 
 OUTPUT_FILE = "merchants.csv"
 
 # In-memory data structure
-MERCHANTS = {} 
+MERCHANTS = {}
 
 # Bank reference data
 BANK_DATA = [
@@ -18,7 +18,7 @@ BANK_DATA = [
     {"bank_code": "7171", "bank_name": "POSB Bank", "branch_code": "081", "branch_name": "Toa Payoh Branch"},
     {"bank_code": "9465", "bank_name": "Citibank Singapore", "branch_code": "001", "branch_name": "Main Branch"},
     {"bank_code": "7083", "bank_name": "RHB Bank Berhad", "branch_code": "001", "branch_name": "Main Branch"},
-    {"bank_code": "7012", "bank_name": "Bank of China Singapore", "branch_code": "001", "branch_name": "Main Branch"}
+    {"bank_code": "7012", "bank_name": "Bank of China Singapore", "branch_code": "001", "branch_name": "Main Branch"},
 ]
 
 # Required fields
@@ -30,7 +30,7 @@ REQUIRED_FIELDS = [
     "branch_code",
     "account_number",
     "account_holder_name",
-    "status"
+    "status",
 ]
 
 ALLOWED_STATUS = {"active", "pending", "suspended"}
@@ -42,17 +42,12 @@ def is_numeric(value: str) -> bool:
 
 # Validate bank details
 def validate_bank_details(bank_name, bank_code, branch_code):
-    banks = []
-    for bank in BANK_DATA:
-        if bank["bank_name"] == bank_name:
-            banks.append(bank)
+    banks = [bank for bank in BANK_DATA if bank["bank_name"] == bank_name]
 
-    if len(banks) == 0:
+    if not banks:
         return False, "INVALID_BANK_NAME", None
 
-    valid_bank_codes = []
-    for bank in banks:
-        valid_bank_codes.append(bank["bank_code"])
+    valid_bank_codes = [bank["bank_code"] for bank in banks]
 
     if bank_code not in valid_bank_codes:
         return False, "INVALID_BANK_CODE", None
@@ -65,24 +60,26 @@ def validate_bank_details(bank_name, bank_code, branch_code):
 
 
 # Save merchant to CSV file
-def save_merchant_to_csv(merchant: Merchant, branch_name: str):
+def save_merchant_to_csv(merchant: Merchant):
+    file_exists = os.path.isfile(OUTPUT_FILE)
+
     with open(OUTPUT_FILE, "a", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
 
-        # Write header (simple beginner approach)
-        writer.writerow([
-            "merchant_id",
-            "merchant_name",
-            "uen",
-            "bank_name",
-            "bank_code",
-            "branch_code",
-            "branch_name",
-            "account_number",
-            "account_holder_name",
-            "status",
-            "saved_at"
-        ])
+        # Write header only once
+        if not file_exists:
+            writer.writerow([
+                "Merchant_ID",
+                "Merchant_Name",
+                "UEN",
+                "Bank_Name",
+                "Bank_Code",
+                "Branch_Code",
+                "Account_Number",
+                "Account_Holder_Name",
+                "Registration_Date",
+                "Status",
+            ])
 
         # Write merchant data
         writer.writerow([
@@ -92,11 +89,10 @@ def save_merchant_to_csv(merchant: Merchant, branch_name: str):
             merchant.bank_name,
             merchant.bank_code,
             merchant.branch_code,
-            branch_name,
             merchant.account_number,
             merchant.account_holder_name,
-            merchant.status,
-            datetime.utcnow().isoformat()
+            merchant.registration_date,
+            merchant.status.capitalize(),
         ])
 
 

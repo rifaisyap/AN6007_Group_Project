@@ -1,81 +1,235 @@
 import flet as ft
-from api_client import get_pending_request, merchant_confirm_redemption, remove_pending_request
+from api_client import (
+    get_pending_request,
+    merchant_confirm_redemption,
+    remove_pending_request,
+    is_valid_merchant
+)
 
 def main(page: ft.Page):
-    page.title = "CDC Merchant App"
+    # Page basic setup
+    page.title = "CDC Merchant Redemption"
     page.theme_mode = ft.ThemeMode.LIGHT
-    
-    # 1. Initialize all controls
-    status_text = ft.Text(value="", size=16, weight=ft.FontWeight.BOLD)
-    m_id = ft.TextField(label="Merchant ID", value="")
-    code_input = ft.TextField(label="Enter Household Redemption Code", hint_text="e.g.: AB1234")
-    result_card = ft.Container(visible=False)
+    page.padding = 30
+    page.scroll = ft.ScrollMode.AUTO   
+    # State
+    logged_in_merchant_id = {"value": None}
 
-    # 2. Pre-define the confirmation button so on_confirm can control it correctly
-    confirm_btn = ft.ElevatedButton(
-        "Confirm Deduction", 
-        bgcolor="green", 
-        color="white"
+    # Common UI elements
+    status_text = ft.Text(size=14, weight=ft.FontWeight.BOLD)
+
+    # Header
+    header = ft.Column(
+        spacing=6,
+        controls=[
+            ft.Text(
+                "CDC Merchant Redemption",
+                size=28,
+                weight=ft.FontWeight.BOLD
+            ),
+            ft.Text(
+                "Secure voucher verification for registered merchants",
+                size=14,
+                color=ft.colors.GREY_600
+            ),
+            ft.Divider()
+        ]
     )
 
-    def on_verify(e):
-        code = code_input.value.strip().upper()
-        data = get_pending_request(code)
-        
-        if data:
-            # --- Fix 1: Ensure button state is reset on every successful verification ---
-            confirm_btn.disabled = False 
-            confirm_btn.on_click = lambda _: on_confirm(code, data)
-            
-            result_card.content = ft.Card(
-                content=ft.Container(
-                    padding=20,
-                    content=ft.Column([
-                        ft.Text(f"Household ID: {data['household_id']}"),
-                        ft.Text(f"Redemption Amount: ${data['total']}.00", size=24, weight="bold"),
-                        confirm_btn 
-                    ])
-                )
-            )
-            status_text.value = f"✅ Found request for household {data['household_id']}"
-            status_text.color = ft.Colors.GREEN
-            result_card.visible = True
-        else:
-            status_text.value = "❌ Error: Invalid Code"
-            status_text.color = ft.Colors.RED
-            result_card.visible = False
+    # Merchant Login Section
+    merchant_input = ft.TextField(
+        label="Merchant ID",
+        helper_text="Example: M-C8BBA95FE6"
+    )
+
+    login_btn = ft.ElevatedButton(
+        text="Login as Merchant",
+        icon=ft.icons.LOGIN
+    )
+
+    def handle_login(e):
+        merchant_id = merchant_input.value.strip()
+
+        if not merchant_id:
+            status_text.value = "❌ Please enter Merchant ID"
+            status_text.color = ft.colors.RED
+            page.update()
+            return
+
+        if not is_valid_merchant(merchant_id):
+            status_text.value = "❌ Merchant ID not found or inactive"
+            status_text.color = ft.colors.RED
+            page.update()
+            return
+
+        # Login success
+        logged_in_merchant_id["value"] = merchant_id
+        status_text.value = f"✅ Logged in as {merchant_id}"
+        status_text.color = ft.colors.GREEN
+
+        voucher_section.visible = True
+        merchant_input.disabled = True
+        login_btn.disabled = True
+
         page.update()
 
-    def on_confirm(code, data):
-        # Disable button to prevent double-clicking resulting in duplicate records
+    login_btn.on_click = handle_login
+
+    login_card = ft.Card(
+        content=ft.Container(
+            padding=20,
+            content=ft.Column(
+                spacing=16,
+                controls=[
+                    ft.Text("Merchant Login", size=20, weight=ft.FontWeight.BOLD),
+                    merchant_input,
+                    login_btn
+                ]
+            )
+        )
+    )
+
+    # Voucher Redemption Section
+    code_input = ft.TextField(
+        label="Redemption Code",
+        helper_text="Example: GP3R8V"
+    )
+
+    verify_btn = ft.ElevatedButton(
+        text="Verify Voucher",
+        icon=ft.icons.SEARCH
+    )
+
+    confirm_btn = ft.ElevatedButton(
+        text="Confirm Deduction",
+        bgcolor=ft.colors.GREEN,
+        color=ft.colors.WHITE,
+        disabled=True
+    )
+
+    result_container = ft.Container(visible=False)
+
+    voucher_section = ft.Card(
+        visible=False,
+        content=ft.Container(
+            padding=20,
+            content=ft.Column(
+                spacing=16,
+                controls=[
+                    ft.Text("Voucher Redemption", size=20, weight=ft.FontWeight.BOLD),
+                    code_input,
+                    verify_btn,
+                    result_container
+                ]
+            )
+        )
+    )
+
+    # Verify voucher code
+    def verify_voucher(e):
+        status_text.value = ""
+        result_container.visible = False
         confirm_btn.disabled = True
         page.update()
 
-        try:
-            # Call API to execute redemption and write to CSV
-            if merchant_confirm_redemption(data['household_id'], m_id.value, data['selections']):
-                remove_pending_request(code)
-                page.snack_bar = ft.SnackBar(ft.Text("✅ Deduction successful, CSV record generated"))
-                page.snack_bar.open = True
-                result_card.visible = False
-                code_input.value = ""
-                status_text.value = "✅ Transaction Completed"
-            else:
-                page.snack_bar = ft.SnackBar(ft.Text("❌ Redemption Failed"))
-                page.snack_bar.open = True
-        finally:
-            # --- Fix 2: Always unlock the button regardless of success or failure to prevent locking up the next attempt ---
-            confirm_btn.disabled = False
-            page.update()
+        code = code_input.value.strip().upper()
 
-    # 3. Ensure all controls (especially status_text) are added to the page
+        if not code:
+            status_text.value = "❌ Please enter redemption code"
+            status_text.color = ft.colors.RED
+            page.update()
+            return
+
+        data = get_pending_request(code)
+
+        if not data:
+            status_text.value = "❌ Invalid or expired redemption code"
+            status_text.color = ft.colors.RED
+            page.update()
+            return
+
+        confirm_btn.disabled = False
+        confirm_btn.on_click = lambda _: confirm_redemption(code, data)
+
+        result_container.content = ft.Card(
+            content=ft.Container(
+                padding=16,
+                content=ft.Column(
+                    spacing=8,
+                    controls=[
+                        ft.Text(f"Household ID: {data['household_id']}"),
+                        ft.Text(
+                            f"Total Amount: ${data['total']}.00",
+                            size=22,
+                            weight=ft.FontWeight.BOLD
+                        ),
+                        confirm_btn
+                    ]
+                )
+            )
+        )
+
+        result_container.visible = True
+        status_text.value = "✅ Voucher found"
+        status_text.color = ft.colors.GREEN
+        page.update()
+
+    verify_btn.on_click = verify_voucher
+
+    # Confirm redemption
+    def confirm_redemption(code, data):
+        merchant_id = logged_in_merchant_id["value"]
+
+        confirm_btn.disabled = True
+        page.update()
+
+        success, reason = merchant_confirm_redemption(
+            data["household_id"],
+            merchant_id,
+            data["selections"]
+        )
+
+        if success:
+            remove_pending_request(code)
+
+            page.snack_bar = ft.SnackBar(
+                ft.Text("✅ Redemption successful")
+            )
+            page.snack_bar.open = True
+
+            status_text.value = "✅ Transaction completed"
+            status_text.color = ft.colors.GREEN
+
+            code_input.value = ""
+            result_container.visible = False
+
+        else:
+            error_map = {
+                "INVALID_MERCHANT": "❌ Merchant not authorised",
+                "HOUSEHOLD_NOT_FOUND": "❌ Household not found",
+                "VOUCHER_NOT_AVAILABLE": "❌ Voucher already redeemed",
+                "VOUCHER_FILE_NOT_FOUND": "❌ System error"
+            }
+
+            status_text.value = error_map.get(reason, "❌ Redemption failed")
+            status_text.color = ft.colors.RED
+
+        confirm_btn.disabled = False
+        page.update()
+
+    # Page Layout 
     page.add(
-        ft.Text("Merchant Redemption Terminal", size=24, weight="bold"),
-        m_id,
-        code_input,
-        ft.ElevatedButton("Verify Code", on_click=on_verify),
-        status_text, # <--- Fix: Must include this line to see feedback
-        result_card
+        ft.Column(
+            expand=True,
+            spacing=24,
+            controls=[
+                header,
+                login_card,
+                voucher_section,
+                status_text
+            ]
+        )
     )
 
+# Run app
 ft.app(target=main)

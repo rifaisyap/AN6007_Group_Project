@@ -7,7 +7,7 @@
         content="width=device-width, initial-scale=1, maximum-scale=1"
     >
 
-    <title>{% block title %}Merchant System{% endblock %}</title>
+    <title>{% block title %}CDC System{% endblock %}</title>
 
     <style>
         :root {
@@ -56,8 +56,15 @@
 
         h1 {
             text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 12px;
             color: var(--primary-dark);
+        }
+
+        .page-subtitle {
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 24px;
+            font-size: 15px;
         }
 
         h3 {
@@ -133,6 +140,7 @@
             font-weight: 700;
             background: var(--primary);
             color: white;
+            cursor: pointer;
         }
 
         button:active {
@@ -164,8 +172,20 @@
 
 <div class="container">
     <div class="card">
-        <h1>{% block header_title %}Merchant Registration{% endblock %}</h1>
+
+        <!-- Page title -->
+        <h1>{% block header_title %}{% endblock %}</h1>
+
+        <!-- Optional subtitle -->
+        {% if self.subtitle() %}
+            <div class="page-subtitle">
+                {% block subtitle %}{% endblock %}
+            </div>
+        {% endif %}
+
+        <!-- Main content -->
         {% block content %}{% endblock %}
+
     </div>
 </div>
 

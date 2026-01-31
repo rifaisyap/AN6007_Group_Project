@@ -1,5 +1,7 @@
 {% extends "merchant_register/base.html" %}
-{% block title %}Register Merchant{% endblock %}
+{% block title %}Merchant Registration{% endblock %}
+{% block header_title %}Merchant Registration{% endblock %}
+
 
 {% block content %}
 <form method="post" action="/merchant/registration">
@@ -10,23 +12,19 @@
 
         <div class="form-grid">
             <div>
-                <label>Merchant Name</label>
-                <input type="text" name="merchant_name" required>
+                <label for="merchant_name">Merchant Name</label>
+                <input type="text" id="merchant_name" name="merchant_name" required>
             </div>
 
             <div>
-                <label>UEN</label>
+                <label for="uen">UEN</label>
                 <input
                     type="text"
                     id="uen"
                     name="uen"
-                    inputmode="numeric"
-                    placeholder="Numbers only"
+                    placeholder="e.g. 201912345K"
                     required
                 >
-                <p class="hint error" id="uen_error" style="display:none;">
-                    UEN must contain numbers only
-                </p>
             </div>
         </div>
     </div>
@@ -37,23 +35,23 @@
 
         <div class="form-grid">
             <div>
-                <label>Bank Name</label>
+                <label for="bank_name">Bank Name</label>
                 <select name="bank_name" id="bank_name" required>
                     <option value="">Select bank</option>
-                    {% for bank_name, bank in banks.items() %}
+                    {% for bank in banks %}
                         <option
-                            value="{{ bank_name }}"
+                            value="{{ bank.bank_name }}"
                             data-bank-code="{{ bank.bank_code }}"
                             data-branch-code="{{ bank.branch_code }}"
                         >
-                            {{ bank_name }}
+                            {{ bank.bank_name }}
                         </option>
                     {% endfor %}
                 </select>
             </div>
 
             <div>
-                <label>Account Number</label>
+                <label for="account_number">Account Number</label>
                 <input
                     type="text"
                     id="account_number"
@@ -68,18 +66,35 @@
             </div>
 
             <div>
-                <label>Bank Code</label>
-                <input type="text" id="bank_code" name="bank_code" readonly required>
+                <label for="bank_code">Bank Code</label>
+                <input
+                    type="text"
+                    id="bank_code"
+                    name="bank_code"
+                    readonly
+                    required
+                >
             </div>
 
             <div>
-                <label>Branch Code</label>
-                <input type="text" id="branch_code" name="branch_code" readonly required>
+                <label for="branch_code">Branch Code</label>
+                <input
+                    type="text"
+                    id="branch_code"
+                    name="branch_code"
+                    readonly
+                    required
+                >
             </div>
 
             <div>
-                <label>Account Holder Name</label>
-                <input type="text" name="account_holder_name" required>
+                <label for="account_holder_name">Account Holder Name</label>
+                <input
+                    type="text"
+                    id="account_holder_name"
+                    name="account_holder_name"
+                    required
+                >
             </div>
         </div>
     </div>
@@ -101,39 +116,36 @@
 </form>
 
 <script>
-    // Bank data - auto fill
+    // Auto-fill bank & branch code
     const bankSelect = document.getElementById("bank_name");
     const bankCode = document.getElementById("bank_code");
     const branchCode = document.getElementById("branch_code");
 
     bankSelect.addEventListener("change", function () {
         const opt = this.options[this.selectedIndex];
+
+        if (!opt.value) {
+            bankCode.value = "";
+            branchCode.value = "";
+            return;
+        }
+
         bankCode.value = opt.dataset.bankCode || "";
         branchCode.value = opt.dataset.branchCode || "";
     });
 
-    // Helper for numeric data only
+    // Numeric-only helper for account number
     function numericOnly(inputEl, errorEl) {
         inputEl.addEventListener("input", function () {
             const numericValue = this.value.replace(/\D/g, "");
 
-            if (this.value !== numericValue) {
-                errorEl.style.display = "block";
-            } else {
-                errorEl.style.display = "none";
-            }
+            errorEl.style.display =
+                this.value !== numericValue ? "block" : "none";
 
             this.value = numericValue;
         });
     }
 
-    // UEN validation
-    numericOnly(
-        document.getElementById("uen"),
-        document.getElementById("uen_error")
-    );
-
-    // Account number validation
     numericOnly(
         document.getElementById("account_number"),
         document.getElementById("account_error")
