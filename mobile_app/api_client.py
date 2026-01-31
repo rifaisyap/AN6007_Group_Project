@@ -1,145 +1,342 @@
+"""
+Voucher Management API Client
+
+This module handles all file-based operations for the voucher redemption system.
+It manages voucher data, pending requests, and transaction logging entirely through
+local file storage, making the system fully offline-capable.
+
+Key Features:
+- Local JSON storage for voucher data
+- Cross-application communication via shared files
+- Transaction logging with CSV audit trails
+- No external server dependencies
+"""
+
 import json
 import os
 import datetime
 import csv
 
-# Set file paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-HOUSEHOLD_FILE = os.path.join(BASE_DIR, "household_data.json")
-VOUCHER_FILE = os.path.join(BASE_DIR, "vouchers.json")
-PENDING_FILE = os.path.join(BASE_DIR, "pending_redemptions.json") # Used for cross-app communication
+# File path configurations
+BASE_DIRECTORY = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+HOUSEHOLD_DATA_FILE = os.path.join(BASE_DIRECTORY, "household_data.json")
+VOUCHER_DATA_FILE = os.path.join(BASE_DIRECTORY, "vouchers.json")
+PENDING_REQUESTS_FILE = os.path.join(BASE_DIRECTORY, "pending_redemptions.json")
 
-def get_balance(household_id):
-    if not os.path.exists(VOUCHER_FILE): return []
-    with open(VOUCHER_FILE, "r") as f:
-        data = json.load(f)
-    # 從 vouchers 鍵中取得列表
-    user_data = data.get(household_id, {})
-    vouchers = user_data.get("vouchers", [])
-    return [v for v in vouchers if v.get("status") == "Active"]
+
+def get_active_vouchers(household_id):
+    """
+    Retrieve all active vouchers for a specific household.
+
+    Args:
+        household_id: Unique identifier for the household
+
+    Returns:
+        List of active voucher dictionaries, or empty list if none found
+    """
+    if not os.path.exists(VOUCHER_DATA_FILE):
+        return []
+
+    with open(VOUCHER_DATA_FILE, "r") as file:
+        voucher_data = json.load(file)
+
+    household_data = voucher_data.get(household_id, {})
+    all_vouchers = household_data.get("vouchers", [])
+
+    # Filter for active vouchers only
+    active_vouchers = [voucher for voucher in all_vouchers
+                       if voucher.get("status") == "Active"]
+
+    return active_vouchers
+
 
 def get_redemption_history(household_id):
-    if not os.path.exists(VOUCHER_FILE): return []
-    with open(VOUCHER_FILE, "r") as f:
-        data = json.load(f)
-    # 從新格式 user_data[household_id]["redemption_history"] 讀取
-    user_data = data.get(household_id, {})
-    if isinstance(user_data, dict):
-        return user_data.get("redemption_history", [])
-    return [] # 防止讀到舊格式的 list
-def get_full_data(household_id):
-    """取得住戶完整物件，包含 vouchers 與 redemption_history"""
-    if not os.path.exists(VOUCHER_FILE): return {}
-    with open(VOUCHER_FILE, "r") as f:
-        data = json.load(f)
-    return data.get(household_id, {})
-# --- Added: Management of temporary requests across apps ---
+    """
+    Get the complete redemption history for a household.
 
-def save_pending_request(code, data):
-    """Save the generated code and data to JSON from the user client"""
-    requests = {}
-    if os.path.exists(PENDING_FILE):
-        with open(PENDING_FILE, "r") as f:
-            try: requests = json.load(f)
-            except: requests = {}
-    requests[code] = data
-    with open(PENDING_FILE, "w") as f:
-        json.dump(requests, f, indent=4)
+    Args:
+        household_id: Unique identifier for the household
 
-def get_pending_request(code):
-    """Read the temporary request from the merchant side"""
-    if not os.path.exists(PENDING_FILE): return None
-    with open(PENDING_FILE, "r") as f:
-        requests = json.load(f)
-    return requests.get(code)
+    Returns:
+        List of redemption transaction records, or empty list if no history exists
+    """
+    if not os.path.exists(VOUCHER_DATA_FILE):
+        return []
 
-def remove_pending_request(code):
-    """Remove temporary request after successful redemption"""
-    if not os.path.exists(PENDING_FILE): return
-    with open(PENDING_FILE, "r") as f:
-        requests = json.load(f)
-    if code in requests:
-        del requests[code]
-        with open(PENDING_FILE, "w") as f:
-            json.dump(requests, f, indent=4)
+    with open(VOUCHER_DATA_FILE, "r") as file:
+        voucher_data = json.load(file)
 
-# --- Fixed: Official redemption logic (Addresses JSON updates and CSV denomination issues) ---
+    household_data = voucher_data.get(household_id, {})
 
-def merchant_confirm_redemption(household_id, merchant_id, selections):
-    if not os.path.exists(VOUCHER_FILE): return False
+    # Return history if household data is in dictionary format
+    if isinstance(household_data, dict):
+        return household_data.get("redemption_history", [])
 
-    # 1. 讀取新的 JSON 格式
-    with open(VOUCHER_FILE, "r") as f:
-        all_data = json.load(f)
+    # Return empty list for old data formats
+    return []
 
-    # 判斷住戶是否存在
-    if household_id not in all_data: return False
 
-    # 取得該住戶的資料容器
-    user_container = all_data[household_id]
-    vouchers = user_container.get("vouchers", [])
-    
-    redeemed_details = []
-    total_amount = 0
+def get_full_household_data(household_id):
+    """
+    Retrieve complete household data including vouchers and history.
 
-    # 2. 核銷邏輯：遍歷 selections 並修改 vouchers 列表中的狀態
-    for amt_str, qty in selections.items():
-        count = 0
-        target_amt = int(amt_str)
-        for v in vouchers:
-            if v["amount"] == target_amt and v["status"] == "Active":
-                v["status"] = "Redeemed"
-                redeemed_details.append({"code": v["voucher_code"], "amt": target_amt})
-                total_amount += target_amt
-                count += 1
-                if count >= int(qty): break
+    Args:
+        household_id: Unique identifier for the household
 
-    if not redeemed_details: return False
+    Returns:
+        Complete household data dictionary, or empty dict if not found
+    """
+    if not os.path.exists(VOUCHER_DATA_FILE):
+        return {}
 
-    # 3. 新增交易紀錄到 redemption_history (用於 App 內查看)
-    now = datetime.datetime.now()
-    txn_id = f"TX{int(now.timestamp())}"
-    
-    new_history_entry = {
-        "transaction_id": txn_id,
-        "date": now.strftime("%Y-%m-%d %H:%M:%S"),
+    with open(VOUCHER_DATA_FILE, "r") as file:
+        voucher_data = json.load(file)
+
+    return voucher_data.get(household_id, {})
+
+
+# Cross-Application Request Management
+
+def save_pending_redemption_request(redemption_code, request_data):
+    """
+    Save a redemption request that will be processed by the merchant app.
+
+    This function creates a temporary request file that acts as a message
+    between the household app (which generates the code) and the merchant
+    app (which processes the redemption).
+
+    Args:
+        redemption_code: 6-character unique code generated by household app
+        request_data: Dictionary containing household_id, selections, and total
+    """
+    # Load existing requests or start with empty dictionary
+    existing_requests = {}
+    if os.path.exists(PENDING_REQUESTS_FILE):
+        try:
+            with open(PENDING_REQUESTS_FILE, "r") as file:
+                existing_requests = json.load(file)
+        except json.JSONDecodeError:
+            # Handle corrupted or empty file
+            existing_requests = {}
+
+    # Add or update the request
+    existing_requests[redemption_code] = request_data
+
+    # Save back to file
+    with open(PENDING_REQUESTS_FILE, "w") as file:
+        json.dump(existing_requests, file, indent=4)
+
+
+def get_pending_redemption_request(redemption_code):
+    """
+    Retrieve a pending redemption request by its code.
+
+    Args:
+        redemption_code: The 6-character code to look up
+
+    Returns:
+        Request data dictionary if found, None otherwise
+    """
+    if not os.path.exists(PENDING_REQUESTS_FILE):
+        return None
+
+    try:
+        with open(PENDING_REQUESTS_FILE, "r") as file:
+            pending_requests = json.load(file)
+    except json.JSONDecodeError:
+        return None
+
+    return pending_requests.get(redemption_code)
+
+
+def remove_pending_redemption_request(redemption_code):
+    """
+    Remove a completed or expired redemption request.
+
+    Args:
+        redemption_code: The code of the request to remove
+    """
+    if not os.path.exists(PENDING_REQUESTS_FILE):
+        return
+
+    try:
+        with open(PENDING_REQUESTS_FILE, "r") as file:
+            pending_requests = json.load(file)
+    except json.JSONDecodeError:
+        return
+
+    # Remove the request if it exists
+    if redemption_code in pending_requests:
+        del pending_requests[redemption_code]
+
+        # Save the updated list
+        with open(PENDING_REQUESTS_FILE, "w") as file:
+            json.dump(pending_requests, file, indent=4)
+
+
+# Redemption Processing and Transaction Logging
+
+def process_merchant_redemption(household_id, merchant_id, voucher_selections):
+    """
+    Process a redemption request from a merchant.
+
+    This is the core redemption function that:
+    1. Updates voucher statuses in the JSON database
+    2. Adds transaction to redemption history
+    3. Generates audit trail in CSV format
+    4. Returns success/failure status
+
+    Args:
+        household_id: ID of the household redeeming vouchers
+        merchant_id: ID of the merchant processing the redemption
+        voucher_selections: Dictionary mapping amounts to quantities
+
+    Returns:
+        True if redemption successful, False otherwise
+    """
+    # Check if voucher data file exists
+    if not os.path.exists(VOUCHER_DATA_FILE):
+        return False
+
+    # Load all voucher data
+    with open(VOUCHER_DATA_FILE, "r") as file:
+        complete_voucher_data = json.load(file)
+
+    # Verify household exists
+    if household_id not in complete_voucher_data:
+        return False
+
+    # Access household's data
+    household_record = complete_voucher_data[household_id]
+    household_vouchers = household_record.get("vouchers", [])
+
+    # Track redeemed vouchers and total amount
+    redeemed_vouchers = []
+    redemption_total = 0
+
+    # Process each denomination requested
+    for amount_string, quantity_string in voucher_selections.items():
+        amount_needed = int(amount_string)
+        quantity_needed = int(quantity_string)
+        redeemed_count = 0
+
+        # Find and redeem matching vouchers
+        for voucher in household_vouchers:
+            if voucher["amount"] == amount_needed and voucher["status"] == "Active":
+                # Mark voucher as redeemed
+                voucher["status"] = "Redeemed"
+
+                # Record redemption details
+                redeemed_vouchers.append({
+                    "code": voucher["voucher_code"],
+                    "amount": amount_needed
+                })
+
+                redemption_total += amount_needed
+                redeemed_count += 1
+
+                # Stop if we've redeemed enough of this denomination
+                if redeemed_count >= quantity_needed:
+                    break
+
+    # Check if any vouchers were actually redeemed
+    if not redeemed_vouchers:
+        return False
+
+    # Create transaction record
+    transaction_time = datetime.datetime.now()
+    transaction_id = f"TX{int(transaction_time.timestamp())}"
+
+    transaction_record = {
+        "transaction_id": transaction_id,
+        "date": transaction_time.strftime("%Y-%m-%d %H:%M:%S"),
         "merchant_id": merchant_id,
-        "amount": total_amount,
-        "items": selections
+        "amount": redemption_total,
+        "items": voucher_selections
     }
-    
-    # 確保 history 鍵存在並寫入
-    if "redemption_history" not in user_container:
-        user_container["redemption_history"] = []
-    user_container["redemption_history"].append(new_history_entry)
 
-    # 4. 寫回 JSON 檔案 (持久化保存)
-    with open(VOUCHER_FILE, "w") as f:
-        json.dump(all_data, f, indent=4)
+    # Ensure history array exists
+    if "redemption_history" not in household_record:
+        household_record["redemption_history"] = []
 
-    # 5. 同步產生符合專案規範的每小時 CSV 紀錄 (用於商家結算)
-    file_name = f"Redeem{now.strftime('%Y%m%d%H')}.csv"
-    headers = ["Transaction_ID", "Household_ID", "Merchant_ID", "Transaction_Date_Time", 
-               "Voucher_Code", "Denomination_Used", "Amount_Redeemed", "Payment_Status", "Remarks"]
+    # Add to history
+    household_record["redemption_history"].append(transaction_record)
 
-    file_exists = os.path.isfile(file_name)
-    with open(file_name, "a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=headers)
-        if not file_exists: writer.writeheader()
-        
-        for i, detail in enumerate(redeemed_details):
-            is_last = (i == len(redeemed_details) - 1)
-            remark = "Final denomination used" if is_last else str(i + 1)
-            
-            writer.writerow({
-                "Transaction_ID": txn_id,
+    # Save updated data
+    with open(VOUCHER_DATA_FILE, "w") as file:
+        json.dump(complete_voucher_data, file, indent=4)
+
+    # Generate audit log
+    create_redemption_audit_log(
+        transaction_id=transaction_id,
+        household_id=household_id,
+        merchant_id=merchant_id,
+        transaction_time=transaction_time,
+        redeemed_vouchers=redeemed_vouchers,
+        redemption_total=redemption_total
+    )
+
+    return True
+
+
+def create_redemption_audit_log(transaction_id, household_id, merchant_id,
+                                transaction_time, redeemed_vouchers, redemption_total):
+    """
+    Create a CSV audit log for accounting and settlement purposes.
+
+    Each redemption creates one row per voucher in a timestamped CSV file.
+    Files are organized by hour for easy merchant settlement processing.
+
+    Args:
+        transaction_id: Unique transaction identifier
+        household_id: ID of redeeming household
+        merchant_id: ID of processing merchant
+        transaction_time: When the transaction occurred
+        redeemed_vouchers: List of voucher details
+        redemption_total: Total amount redeemed
+    """
+    # Create filename based on transaction hour
+    hour_timestamp = transaction_time.strftime('%Y%m%d%H')
+    audit_filename = f"Redeem{hour_timestamp}.csv"
+
+    # CSV column headers
+    csv_headers = [
+        "Transaction_ID",
+        "Household_ID",
+        "Merchant_ID",
+        "Transaction_Date_Time",
+        "Voucher_Code",
+        "Denomination_Used",
+        "Amount_Redeemed",
+        "Payment_Status",
+        "Remarks"
+    ]
+
+    # Check if file exists to determine if we need headers
+    file_already_exists = os.path.isfile(audit_filename)
+
+    with open(audit_filename, "a", newline="") as csv_file:
+        csv_writer = csv.DictWriter(csv_file, fieldnames=csv_headers)
+
+        # Write header only for new files
+        if not file_already_exists:
+            csv_writer.writeheader()
+
+        # Create one row per redeemed voucher
+        for index, voucher_detail in enumerate(redeemed_vouchers):
+            is_final_voucher = (index == len(redeemed_vouchers) - 1)
+
+            # Create remark: "Final denomination used" for last voucher
+            remark_text = "Final denomination used" if is_final_voucher else str(index + 1)
+
+            csv_writer.writerow({
+                "Transaction_ID": transaction_id,
                 "Household_ID": household_id,
                 "Merchant_ID": merchant_id,
-                "Transaction_Date_Time": now.strftime("%Y-%m-%d-%H%M%S"),
-                "Voucher_Code": detail["code"],
-                "Denomination_Used": f"${detail['amt']}.00",
-                "Amount_Redeemed": f"${total_amount}.00",
+                "Transaction_Date_Time": transaction_time.strftime("%Y-%m-%d-%H%M%S"),
+                "Voucher_Code": voucher_detail["code"],
+                "Denomination_Used": f"${voucher_detail['amount']}.00",
+                "Amount_Redeemed": f"${redemption_total}.00",
                 "Payment_Status": "Completed",
-                "Remarks": remark
+                "Remarks": remark_text
             })
-    return True
