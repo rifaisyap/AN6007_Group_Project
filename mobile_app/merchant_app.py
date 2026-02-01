@@ -67,6 +67,7 @@ def main(page: ft.Page):
         status_text.value = f"✅ Logged in as {merchant_id}"
         status_text.color = ft.colors.GREEN
 
+        # Unlock next step (voucher verification / confirmation)
         voucher_section.visible = True
         merchant_input.disabled = True
         login_btn.disabled = True
@@ -132,8 +133,10 @@ def main(page: ft.Page):
         confirm_btn.disabled = True
         page.update()
 
+        # Normalize input
         code = code_input.value.strip().upper()
 
+        # Lookup pending request associated with the redeem code
         if not code:
             status_text.value = "❌ Please enter redemption code"
             status_text.color = ft.colors.RED
@@ -189,6 +192,7 @@ def main(page: ft.Page):
             data["selections"]
         )
 
+        # User feedback
         if success:
             remove_pending_request(code)
 
@@ -197,6 +201,7 @@ def main(page: ft.Page):
             )
             page.snack_bar.open = True
 
+            # Reset UI
             status_text.value = "✅ Transaction completed"
             status_text.color = ft.colors.GREEN
 
