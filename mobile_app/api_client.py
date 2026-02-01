@@ -17,10 +17,10 @@ MERCHANT_FILE = os.path.join(BASE_DIR, "merchants.csv")
 def get_balance(household_id):
     if not os.path.exists(VOUCHER_FILE):
         return []
-
+    # Load voucher store from disk (file-based persistence)
     with open(VOUCHER_FILE, "r") as f:
         data = json.load(f)
-
+    # Per-household container stores: vouchers and recordsredemption_history
     user_data = data.get(household_id, {})
     vouchers = user_data.get("vouchers", [])
 
@@ -42,6 +42,7 @@ def get_redemption_history(household_id):
 def save_pending_request(code, data):
     requests = {}
 
+    # Load existing pending requests if file exists
     if os.path.exists(PENDING_FILE):
         with open(PENDING_FILE, "r") as f:
             try:
@@ -49,6 +50,7 @@ def save_pending_request(code, data):
             except:
                 requests = {}
 
+    # Store the pending request under the redeem code
     requests[code] = data
 
     with open(PENDING_FILE, "w") as f:
@@ -88,6 +90,7 @@ def is_valid_merchant(merchant_id):
 
     merchant_id = merchant_id.strip()
 
+    # Scan CSV to find matching merchant_id and check status
     with open(MERCHANT_FILE, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
 
@@ -182,13 +185,16 @@ def merchant_confirm_redemption(household_id, merchant_id, selections):
     ]
 
     file_exists = os.path.isfile(csv_path)
-
+    
+    # Append to the hourly CSV
     with open(csv_path, "a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=headers)
 
         if not file_exists:
             writer.writeheader()
-
+        
+        # Write one row per redeemed voucher 
+        # Mark the final row for easier readability in CSV
         for i, detail in enumerate(redeemed_details):
             remark = "Final denomination used" if i == len(redeemed_details) - 1 else str(i + 1)
 
