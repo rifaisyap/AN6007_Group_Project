@@ -33,9 +33,10 @@ def merchant_register():
     # Handle merchant registration submission
     payload = request.get_json() if request.is_json else request.form.to_dict()
 
+    # Basic input presence check
     if not payload:
         return jsonify({"error": "Invalid or missing request body"}), 400
-
+    # Validate required fields
     error = validate_payload(payload)
     if error:
         return jsonify({"error": error}), 400
@@ -68,6 +69,7 @@ def merchant_register():
         status=payload["status"].lower()
     )
 
+    # Store merchant in memory for fast lookup during redemption
     MERCHANTS[merchant.merchant_id] = merchant
     save_merchant_to_csv(merchant)
 
@@ -81,7 +83,8 @@ def merchant_register():
             account_holder_name=merchant.account_holder_name,
             account_number=merchant.account_number
         )
-
+    
+    # JSON response (API use)
     return jsonify({
         "message": "Merchant registered",
         "merchant_id": merchant.merchant_id
