@@ -41,29 +41,30 @@ def save_vouchers_to_disk(data):
         json.dump(data, f, indent=4)
 
 def generate_vouchers(household_id, tranche):
-    #verify status
+    #validation checks
     # 1. check household id 
     if household_id not in household_db:
         return False, "Household not found"
 
     household = household_db[household_id]
 
-    # 2. check if claimed
+    # 2. Validate tranche claim status (prevent duplicate claims)
     if not household.can_claim(tranche):
         return False, f"Tranche {tranche} already claimed or invalid."
 
-    # 3. 
+    # 3. Validate tranche configuration
     config = TRANCHE_CONFIG.get(tranche)
     if not config:
         return False, "Invalid tranche type"
 
-    # 4. 
+    # 4. Voucher generation
     new_vouchers = []
     
     for item in config['breakdown']:
         amount = item['amount']
         count = item['count']
         
+        # Build a unique voucher code for traceability and uniqueness
         for _ in range(count):
             unique_suffix = uuid.uuid4().hex[:6].upper()
             code = f"V-{household_id}-{tranche[:3].upper()}-{unique_suffix}"
@@ -80,14 +81,14 @@ def generate_vouchers(household_id, tranche):
     all_vouchers = load_vouchers_from_disk()
     
     if household_id not in all_vouchers:
-        # 初始化為物件，包含券列表與空的交易紀錄
+        # Initialize a household record in vouchers.json:
         all_data = {
             "vouchers": [],
-            "redemption_history": []  # 預留空間給以後的交易紀錄
+            "redemption_history": []  # reserved space for future transaction history
         }
         all_vouchers[household_id] = all_data
     
-    # 將新產生的券加入住戶的 vouchers 列表
+    # # Append newly generated vouchers into the household's voucher list
     all_vouchers[household_id]["vouchers"].extend(new_vouchers)
     
     save_vouchers_to_disk(all_vouchers)
@@ -99,5 +100,5 @@ def generate_vouchers(household_id, tranche):
         "message": "Vouchers generated successfully",
         "tranche": tranche,
         "count": len(new_vouchers),
-        "vouchers": new_vouchers  # 
+        "vouchers": new_vouchers  # Return generated vouchers
     }
