@@ -1,24 +1,62 @@
-import json
+import sqlite3
 import os
+import json
 from models.household import Household
 
-household_db = {} 
-FILE_PATH = "household_data.json"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "vouchers.db")
 
-def save_household_json():
-    data_to_save = {k: v.to_dict() for k, v in household_db.items()}
-    with open(FILE_PATH, 'w') as f:
-        json.dump(data_to_save, f, indent=4)
+def get_db_connection():
+    """connects to database"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode = WAL;")
+    return conn
 
-def load_household_data():
-    if not os.path.exists(FILE_PATH):
-        return
-
+def save_household_sql(household_obj):
+    conn = get_db_connection()
     try:
-        with open(FILE_PATH, 'r') as f:
-            data = json.load(f)
-            for h_id, h_data in data.items():
-                household_db[h_id] = Household.from_dict(h_data)
-        print(f"[System] Loaded {len(household_db)} households from storage.")
+        with conn:
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS households (
+                    household_id TEXT PRIMARY KEY,
+                    data_json TEXT
+                )
+            ''')
+            conn.execute("""
+                INSERT OR REPLACE INTO households (household_id, data_json)
+                VALUES (?, ?)
+            """, (household_obj.household_id, json.dumps(household_obj.to_dict())))
+        return True
     except Exception as e:
-        print(f"[Error] Failed to load data: {e}")
+        print(f"[Error] Failed to save household: {e}")
+        return False
+    finally:
+        conn.close()
+
+def load_single_household(household_id):
+    conn = get_db_connection()
+    try:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS households (
+                household_id TEXT PRIMARY KEY,
+                data_json TEXT
+            )
+        ''')
+        
+        row = conn.execute(
+            "SELECT data_json FROM households WHERE household_id = ?", 
+            (household_id,)
+        ).fetchone()
+        
+        if row:
+            h_data = json.loads(row['data_json'])
+            return Household.from_dict(h_data)
+        return None
+    except Exception as e:
+        print(f"[Error] Load household failed: {e}")
+        return None
+    finally:
+        conn.close()
+
+household_db = {}
