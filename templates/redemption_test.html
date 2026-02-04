@@ -73,7 +73,6 @@
 
             resultDiv.style.display = 'block';
             if (response.ok) {
-                // 成功：顯示綠色背景，並自動把 Code 填入下方的商家欄位方便測試
                 resultDiv.style.background = '#dcfce7'; 
                 resultDiv.style.color = '#166534';
                 resultDiv.innerHTML = `<strong>Success!</strong><br>Code: <code>${data.qr_string}</code>`;

@@ -3,9 +3,8 @@ from datetime import datetime
 import uuid
 from models.household import Household
 from storage.household_storage import (
-    household_db,
-    save_household_json,
-    load_household_data
+    save_household_sql,
+    load_single_household
 )
 from models.merchant import Merchant
 from storage.merchant_storage import (
@@ -16,6 +15,7 @@ from storage.merchant_storage import (
     BANK_DATA
 )
 from models.claim import generate_vouchers
+
 import os
 
 app = Flask(__name__)
@@ -97,20 +97,18 @@ def household_register_page():
 
 @app.route("/household/registration", methods=["POST"])
 def household_register():
-    # Handle household registration and save data
     payload = request.get_json() if request.is_json else request.form.to_dict()
     household_id = payload.get("household_id")
 
     if not household_id:
         return jsonify({"error": "Missing household_id"}), 400
 
-    if household_id in household_db:
+    if load_single_household(household_id):
         return jsonify({"error": "Already registered"}), 409
 
-    # Create household object and store it
     new_household = Household(household_id, payload)
-    household_db[household_id] = new_household
-    save_household_json()
+    
+    save_household_sql(new_household)
 
     return jsonify({
         "status": "success",
@@ -144,13 +142,11 @@ def claim_api():
 
 
 # System entry point
-
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
 if __name__ == "__main__":
-    print("System starting, loading data from disk...")
-    load_household_data()
+    print("System starting...")
     app.run(port=8000, debug=True)
